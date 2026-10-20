@@ -1,0 +1,1587 @@
+{
+  "id": "frfTimesheets001",
+  "name": "1 · Timesheets: chase → approve → payroll export",
+  "nodes": [
+    {
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        -200
+      ],
+      "parameters": {
+        "content": "## 1 · Timesheets: chase → approve → payroll export\nMonday: text every temp with a missing timesheet. Temp submits hours on a mobile form → client manager approves in one click → temp gets a text. Friday: approved hours → payroll and invoicing CSV.\nIn a live agency, \"Load data\" and the update nodes talk to the ATS and payroll instead of the demo tables.",
+        "width": 1700,
+        "height": 140,
+        "color": 5
+      },
+      "id": "0ba1d9e9-9955-41f8-af52-b3de3073bf22"
+    },
+    {
+      "name": "Lane: console",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        -20
+      ],
+      "parameters": {
+        "content": "### Run from the demo console\nThe console sends run = chase or export.",
+        "width": 520,
+        "height": 220,
+        "color": 7
+      },
+      "id": "f2f8a980-66fc-40df-a1ff-ac1303ac30e8"
+    },
+    {
+      "name": "Run from console",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        60
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "194654f8-c405-4e82-ac1e-b249c8e2fee8"
+    },
+    {
+      "name": "Export or chase?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        200,
+        60
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c257c524-3735-4859-a785-4ed745de0d67",
+              "leftValue": "={{ String($json.run ?? '') }}",
+              "rightValue": "export",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "11244258-a8f7-41cd-a46e-103d926e07a6"
+    },
+    {
+      "name": "Lane: chase",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        240
+      ],
+      "parameters": {
+        "content": "### Monday 09:00: chase missing timesheets\nTexts each temp a secure link, reminds client managers to approve, emails the consultant a summary.",
+        "width": 1320,
+        "height": 500,
+        "color": 7
+      },
+      "id": "590eab2d-d9f6-478d-ae86-370477b481f3"
+    },
+    {
+      "name": "Every Monday 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        320
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "5a279319-4512-4db5-aca1-5dbe4ac623f6"
+    },
+    {
+      "name": "Load data (chase)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        320
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ad95206f-fc9d-4d04-a056-e4f647568b79"
+    },
+    {
+      "name": "Plan chase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        320
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// Monday chase: text every temp whose timesheet is missing, nudge clients who haven't approved,\n// and send the consultant one summary. Returns { updates, messages, summary }.\nconst config = configFrom('Config');\nconst T = Object.fromEntries(tableRows('Temps').map((t) => [t.temp_id, t]));\nconst C = Object.fromEntries(tableRows('Clients').map((c) => [c.client_id, c]));\nconst week = config.week_ending;\nconst base = config.base_url;\nconst sheets = tableRows('Timesheets').filter((t) => t.week_ending === week);\nconst missing = sheets.filter((t) => t.status === 'missing' || t.status === 'queried');\nconst awaiting = sheets.filter((t) => t.status === 'submitted');\nconst weekLabel = new Date(week).toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' });\n\nconst updates = [];\nconst messages = [];\n\nfor (const ts of missing) {\n  const temp = T[ts.temp_id];\n  const client = C[ts.client_id];\n  const reminders = Number(ts.reminders_sent || 0) + 1;\n  const link = `${base}/webhook/timesheet?t=${ts.submit_token}`;\n  const body = reminders === 1\n    ? `Hi ${temp.first_name}, it's ${config.agency_name}. Please submit your hours for w/e ${weekLabel} at ${client.name}. It takes under a minute:`\n    : `Hi ${temp.first_name}, your timesheet for w/e ${weekLabel} at ${client.name} is still missing. Payroll closes Friday 12pm, so please submit today:`;\n  messages.push({ channel: 'SMS', to_name: fullName(temp), to_address: temp.phone, subject: '', body, link, related: ts.timesheet_id, workflow: 'Timesheet chase' });\n  updates.push({ id: ts.id, reminders_sent: reminders, last_reminder_at: nowIso() });\n}\n\nfor (const ts of awaiting) {\n  const temp = T[ts.temp_id];\n  const client = C[ts.client_id];\n  messages.push({\n    channel: 'Email', to_name: client.manager_name, to_address: client.manager_email,\n    subject: `Reminder: please approve ${fullName(temp)}'s hours (w/e ${weekLabel})`,\n    body: `${fullName(temp)} submitted ${Number(ts.hours).toFixed(1)} hours. One click approves them for payroll.`,\n    link: `${base}/webhook/timesheet/approve?t=${ts.approve_token}`, related: ts.timesheet_id, workflow: 'Timesheet chase',\n  });\n}\n\nconst done = sheets.filter((t) => t.status === 'approved' || t.status === 'exported').length;\nmessages.push({\n  channel: 'Email', to_name: config.consultant_name, to_address: config.consultant_email,\n  subject: `Timesheets w/e ${weekLabel}: ${done} of ${sheets.length} approved`,\n  body: `Chased ${missing.length} temps by SMS (${missing.map((t) => fullName(T[t.temp_id])).join(', ') || 'none'}). Reminded ${awaiting.length} client manager(s) to approve. Anything still missing at 2pm needs a call.`,\n  link: `${base}/webhook/console`, related: `Week ending ${week}`, workflow: 'Timesheet chase',\n});\n\nreturn [{ json: { updates, messages, summary: `Chased ${missing.length} missing timesheets and ${awaiting.length} client approvals.` } }];\n"
+      },
+      "id": "7da731c6-2db4-4e30-a98a-0d4772a31e98"
+    },
+    {
+      "name": "Reminder counts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        320
+      ],
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "170ddcf3-05e4-4783-a47c-c0f7e762885d"
+    },
+    {
+      "name": "Update timesheets",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        320
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Timesheets"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "dd0d19b3-4e27-43d4-a008-d19145c950bf"
+    },
+    {
+      "name": "Chase messages",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        460
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "f717efad-f423-401b-ad42-73678c96fa9c"
+    },
+    {
+      "name": "Send chase messages",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        460
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfSendMessage01"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "6f836d9a-8348-41d9-a126-775b7833126a"
+    },
+    {
+      "name": "Chase result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        600
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// Hand the automation's summary back to the console.\nlet summary = $input.first().json.summary;\nreturn [{ json: { summary: summary || 'Done.' } }];"
+      },
+      "id": "56cf9fd2-b7eb-43d4-aa2a-fc950e65917f"
+    },
+    {
+      "name": "Lane: export",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        780
+      ],
+      "parameters": {
+        "content": "### Friday 12:00: payroll export\nApproved hours → CSV with pay, charge and margin per worker (PAYE or umbrella), saved to files/payroll-exports.",
+        "width": 1520,
+        "height": 640,
+        "color": 7
+      },
+      "id": "428010d3-03b6-4b3e-a118-ba15ec788f3b"
+    },
+    {
+      "name": "Every Friday 12:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        860
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 12
+            }
+          ]
+        }
+      },
+      "id": "68cc9193-de47-42b5-a156-46f918235f19"
+    },
+    {
+      "name": "Load data (export)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        860
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "fd5443c3-a97b-4736-a08e-e393296dd8f2"
+    },
+    {
+      "name": "Build payroll CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        860
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// Payroll export: approved hours for the week → one CSV for payroll and invoicing.\n// Returns one item with { updates, messages, exportRecord, fileName } and the CSV as binary \"data\".\nconst config = configFrom('Config');\nconst week = config.week_ending;\nconst T = Object.fromEntries(tableRows('Temps').map((t) => [t.temp_id, t]));\nconst C = Object.fromEntries(tableRows('Clients').map((c) => [c.client_id, c]));\nconst U = Object.fromEntries(tableRows('Umbrellas').map((u) => [u.umbrella_id, u]));\nconst approved = tableRows('Timesheets').filter((t) => t.week_ending === week && t.status === 'approved')\n  .sort((a, b) => a.temp_id.localeCompare(b.temp_id));\n\nif (!approved.length) {\n  return [{ json: { updates: [], messages: [], exportRecords: [], fileName: '', summary: 'No newly approved timesheets to export.' } }];\n}\n\nconst csvCell = (v) => {\n  const s = String(v ?? '');\n  return /[\",\\n]/.test(s) ? `\"${s.replace(/\"/g, '\"\"')}\"` : s;\n};\nconst header = ['Timesheet', 'Week ending', 'Worker ID', 'Worker', 'Pay route', 'Paid to', 'Client', 'Hours', 'Pay rate', 'Pay total', 'Charge rate', 'Invoice total (ex VAT)', 'Margin', 'Approved by', 'Approved at'];\nlet payTotal = 0;\nlet invoiceTotal = 0;\nconst lines = approved.map((ts) => {\n  const temp = T[ts.temp_id];\n  const hours = Number(ts.hours);\n  const pay = round2(hours * temp.pay_rate);\n  const invoice = round2(hours * temp.charge_rate);\n  payTotal += pay;\n  invoiceTotal += invoice;\n  const umbrella = temp.pay_route === 'PAYE' ? null : U[temp.pay_route];\n  return [ts.timesheet_id, ts.week_ending, temp.temp_id, fullName(temp), umbrella ? 'Umbrella' : 'PAYE', umbrella ? umbrella.name : 'Agency payroll',\n    C[ts.client_id].name, hours.toFixed(2), temp.pay_rate.toFixed(2), pay.toFixed(2), temp.charge_rate.toFixed(2), invoice.toFixed(2), round2(invoice - pay).toFixed(2),\n    ts.approved_by || '', ts.approved_at ? new Date(ts.approved_at).toISOString().slice(0, 16).replace('T', ' ') : ''].map(csvCell).join(',');\n});\npayTotal = round2(payTotal);\ninvoiceTotal = round2(invoiceTotal);\nlines.push(['TOTAL', '', '', '', '', '', '', approved.reduce((s, t) => s + Number(t.hours), 0).toFixed(2), '', payTotal.toFixed(2), '', invoiceTotal.toFixed(2), round2(invoiceTotal - payTotal).toFixed(2), '', ''].map(csvCell).join(','));\nconst csv = [header.join(','), ...lines].join('\\r\\n') + '\\r\\n';\n\nconst stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 13);\nconst fileName = `payroll-we-${week}-${stamp}.csv`;\nconst now = nowIso();\nconst updates = approved.map((ts) => ({ id: ts.id, status: 'exported', exported_at: now, export_file: fileName }));\nconst exportRecords = [{ file_name: fileName, week_ending: week, rows: approved.length, pay_total: payTotal, invoice_total: invoiceTotal, created_at: now }];\nconst messages = [{\n  channel: 'Email', to_name: 'Payroll', to_address: config.payroll_email,\n  subject: `Payroll export w/e ${week}: ${approved.length} timesheets, ${money(payTotal)} pay`,\n  body: `Attached: ${fileName}. ${approved.length} approved timesheets. Pay ${money(payTotal)}, invoices ${money(invoiceTotal)} ex VAT. Umbrella workers are listed by umbrella company.`,\n  link: `${config.base_url}/webhook/payroll/file?name=${encodeURIComponent(fileName)}`, related: fileName, workflow: 'Payroll export',\n}];\n\nreturn [{\n  json: { updates, messages, exportRecords, fileName, summary: `Exported ${approved.length} approved timesheets to ${fileName}.` },\n  binary: { data: { data: Buffer.from(csv, 'utf8').toString('base64'), mimeType: 'text/csv', fileName, fileExtension: 'csv' } },\n}];\n"
+      },
+      "id": "75231a63-70df-4980-a2cd-9161a0baa03d"
+    },
+    {
+      "name": "Anything to export?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        860
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c5003359-cc60-4191-af99-2fbecf1dc049",
+              "leftValue": "={{ String($json.fileName ?? '') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3be5c1a7-27c4-435a-aef5-7da58d554df0"
+    },
+    {
+      "name": "Save CSV to files",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        800,
+        860
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "=D:/Software Development/automations/n8n/files/payroll-exports/{{ $json.fileName }}",
+        "dataPropertyName": "data",
+        "options": {}
+      },
+      "id": "2ad81a02-5da6-4b56-a953-08d11ea8d48e"
+    },
+    {
+      "name": "Exported timesheets",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        860
+      ],
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "2fdb3504-911c-44c8-ad7a-639827f15d29"
+    },
+    {
+      "name": "Mark as exported",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        860
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Timesheets"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "ed74d172-cd00-41f4-a030-7300f42c9299"
+    },
+    {
+      "name": "Export record",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        1000
+      ],
+      "parameters": {
+        "fieldToSplitOut": "exportRecords",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "7d257213-4fb6-4e6e-aa5d-b8fc1fb7899b"
+    },
+    {
+      "name": "Record export",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        1000
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Exports"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "82790572-f93e-4db9-a839-2c4002b04ef5"
+    },
+    {
+      "name": "Payroll email",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        1140
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "265e92d3-edd9-4c3b-a893-4990f0fb8861"
+    },
+    {
+      "name": "Send payroll email",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        1140
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfSendMessage01"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "bc0722a7-055c-48e8-a2ec-6f5087c0d539"
+    },
+    {
+      "name": "Export result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        1280
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// Hand the automation's summary back to the console.\nlet summary = $input.first().json.summary;\nreturn [{ json: { summary: summary || 'Done.' } }];"
+      },
+      "id": "71b67ba6-3a41-43f2-aba3-428bc867a3b4"
+    },
+    {
+      "name": "Lane: form",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        1460
+      ],
+      "parameters": {
+        "content": "### Temp opens the SMS link\nMobile form with hours per day.",
+        "width": 920,
+        "height": 220,
+        "color": 7
+      },
+      "id": "ba2a211a-e7a7-40ae-afeb-75c95f1f2342"
+    },
+    {
+      "name": "Temp opens timesheet link",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1540
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "timesheet",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "5a3054c1-e9b6-4854-aae7-8e880ab3f6f1",
+      "id": "f48963ea-43ed-4021-a471-44d4b7424796"
+    },
+    {
+      "name": "Load data (form)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        1540
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "f60a9725-13fd-4a17-af95-2083d0eb5b7b"
+    },
+    {
+      "name": "Render timesheet form",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1540
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// GET /webhook/timesheet?t=TOKEN: the temp's mobile timesheet form.\nconst config = configFrom('Config');\nconst token = String($('Temp opens timesheet link').first().json.query?.t || '');\nconst ts = tableRows('Timesheets').find((t) => token && t.submit_token === token);\nconst temp = ts && tableRows('Temps').find((t) => t.temp_id === ts.temp_id);\nconst client = ts && tableRows('Clients').find((c) => c.client_id === ts.client_id);\nconst agency = config.agency_name;\n\nif (!ts) {\n  return [{ json: { html: page('Link not found', agency, `<h1>This link has expired</h1><p class=\"muted\">Please contact ${esc(agency)} for a new timesheet link.</p>`) } }];\n}\nif (ts.status !== 'missing' && ts.status !== 'queried') {\n  return [{ json: { html: page('Already submitted', agency, `<h1>Thanks, ${esc(temp.first_name)}</h1><div class=\"ok\">Your hours for w/e ${esc(fmtDate(ts.week_ending))} are already in (${Number(ts.hours).toFixed(1)} hours).</div><p class=\"muted\">Status: ${esc(ts.status)}. Questions? Reply to our text.</p>`) } }];\n}\n\n// Work in UTC calendar days so the form is right whatever the server's own timezone is.\nconst end = new Date(`${String(ts.week_ending).slice(0, 10)}T00:00:00Z`);\nconst days = [6, 5, 4, 3, 2, 1, 0].map((back) => {\n  const d = new Date(end.getTime() - back * 86400000);\n  return { key: d.toISOString().slice(0, 10), label: d.toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short' }), date: d.getUTCDate() };\n});\nconst defaults = { Mon: 8, Tue: 8, Wed: 8, Thu: 8, Fri: 8, Sat: 0, Sun: 0 };\nconst inputs = days.map((d) => `<div><label for=\"h_${d.key}\">${d.label} ${d.date}</label><input id=\"h_${d.key}\" name=\"h_${d.key}\" type=\"number\" min=\"0\" max=\"16\" step=\"0.25\" value=\"${defaults[d.label] ?? 0}\"></div>`).join('');\n\nconst body = `<h1>Timesheet: w/e ${esc(fmtDate(ts.week_ending))}</h1>\n<p>Hi ${esc(temp.first_name)}, enter the hours you worked at <strong>${esc(client.name)}</strong> (${esc(client.site)}).${ts.status === 'queried' ? ' <br><span class=\"warn\">Your client queried the last submission. Please check and resubmit.</span>' : ''}</p>\n<form method=\"post\" action=\"${config.base_url}/webhook/timesheet\">\n<input type=\"hidden\" name=\"t\" value=\"${esc(token)}\">\n<div class=\"days\">${inputs}</div>\n<label for=\"notes\">Notes for the agency (optional)</label><input id=\"notes\" name=\"notes\" type=\"text\" maxlength=\"200\" placeholder=\"e.g. stayed late Thursday for a delivery\">\n<label><input type=\"checkbox\" name=\"confirm\" value=\"yes\" required style=\"width:auto;margin-right:6px\">I confirm these hours are correct</label>\n<button class=\"btn\" type=\"submit\">Submit hours</button>\n</form><p class=\"muted\">Your manager ${esc(client.manager_name)} will approve them. You'll get a text when they do.</p>`;\nreturn [{ json: { html: page('Submit your timesheet', agency, body) } }];\n"
+      },
+      "id": "a2a04216-42cb-4074-a4ac-9505a33d2348"
+    },
+    {
+      "name": "Show form",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        1540
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "8aeef892-86f6-47ba-a888-4f247a3aded4"
+    },
+    {
+      "name": "Lane: submit",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        1720
+      ],
+      "parameters": {
+        "content": "### Temp submits hours\nSaves the hours, emails the client manager a one-click approval link, shows the temp a confirmation.",
+        "width": 1320,
+        "height": 500,
+        "color": 7
+      },
+      "id": "2ce8e2ea-66d9-4cff-abd6-e13d651e600b"
+    },
+    {
+      "name": "Temp submits hours",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1800
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "timesheet",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "19e7dbdc-3787-4af3-a9b5-5d47cbb7b273",
+      "id": "8e418ec5-9701-4182-a9f2-8b9b57b47596"
+    },
+    {
+      "name": "Load data (submit)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        1800
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "6b74143e-a133-4b2d-a453-33baa25f1439"
+    },
+    {
+      "name": "Save hours",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1800
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// POST /webhook/timesheet: save the temp's hours and send the client manager a one-click approval link.\nconst config = configFrom('Config');\nconst form = $('Temp submits hours').first().json.body || {};\nconst token = String(form.t || '');\nconst ts = tableRows('Timesheets').find((t) => token && t.submit_token === token);\nconst agency = config.agency_name;\nconst empty = { updates: [], messages: [] };\n\nif (!ts || (ts.status !== 'missing' && ts.status !== 'queried')) {\n  return [{ json: { ...empty, html: page('Link not valid', agency, `<h1>We couldn't save this timesheet</h1><p class=\"muted\">The link has already been used or has expired. Please contact ${esc(agency)}.</p>`) } }];\n}\nconst temp = tableRows('Temps').find((t) => t.temp_id === ts.temp_id);\nconst client = tableRows('Clients').find((c) => c.client_id === ts.client_id);\nconst dayKeys = Object.keys(form).filter((k) => k.startsWith('h_')).sort();\nconst daily = dayKeys.map((k) => ({ day: k.slice(2), hours: Math.max(0, Math.min(16, Number(form[k]) || 0)) }));\nconst hours = round2(daily.reduce((s, d) => s + d.hours, 0));\n\nif (hours <= 0 || hours > 72) {\n  return [{ json: { ...empty, html: page('Check your hours', agency, `<h1>Please check your hours</h1><div class=\"warn\">A week must be between 0.25 and 72 hours. You entered ${hours}.</div><a class=\"btn\" href=\"${config.base_url}/webhook/timesheet?t=${esc(token)}\">Go back</a>`) } }];\n}\n\nconst approveToken = newToken();\nconst breakdown = daily.filter((d) => d.hours > 0).map((d) => `${new Date(d.day).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short' })} ${d.hours}`).join(', ');\nconst updates = [{ id: ts.id, status: 'submitted', hours, daily_breakdown: breakdown, notes: String(form.notes || '').slice(0, 200), submitted_at: nowIso(), approve_token: approveToken }];\nconst weekLabel = new Date(ts.week_ending).toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' });\nconst messages = [{\n  channel: 'Email', to_name: client.manager_name, to_address: client.manager_email,\n  subject: `Approve ${fullName(temp)}'s hours: ${hours} hrs, w/e ${weekLabel}`,\n  body: `${fullName(temp)} (${temp.role}) submitted ${hours} hours: ${breakdown}.${form.notes ? ' Note: ' + String(form.notes).slice(0, 200) : ''} Approve or query with one click.`,\n  link: `${config.base_url}/webhook/timesheet/approve?t=${approveToken}`, related: ts.timesheet_id, workflow: 'Timesheet submitted',\n}];\nconst html = page('Hours submitted', agency, `<h1>Thanks, ${esc(temp.first_name)}</h1><div class=\"ok\">${hours} hours sent to ${esc(client.manager_name)} for approval.</div>\n<table>${daily.map((d) => `<tr><td>${new Date(d.day).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'short' })}</td><td class=\"num\">${d.hours}</td></tr>`).join('')}<tr><th>Total</th><th class=\"num\">${hours}</th></tr></table>\n<p class=\"muted\">We'll text you once they're approved.</p>`);\nreturn [{ json: { updates, messages, html } }];\n"
+      },
+      "id": "0a5e4777-2d25-4639-a771-5d0e712750b8"
+    },
+    {
+      "name": "Submitted hours",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        1800
+      ],
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "115e33b8-3544-4d2e-a68d-6fde914c84e8"
+    },
+    {
+      "name": "Update timesheet",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        1800
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Timesheets"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "97969edf-911a-4018-ad1d-c315cd001a9b"
+    },
+    {
+      "name": "Approval request",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        1940
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "2ba538b9-361f-48af-a0f6-629f52f22789"
+    },
+    {
+      "name": "Email client manager",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        1940
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfSendMessage01"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "d792b04e-11e3-4ad0-a382-efe977851842"
+    },
+    {
+      "name": "Show confirmation",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        2080
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "deed7db0-f0da-4846-ab5b-2e0099b33adc"
+    },
+    {
+      "name": "Lane: approve",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        2260
+      ],
+      "parameters": {
+        "content": "### Client manager approves or queries\nApprove → temp gets a text. Query → consultant gets an alert and the temp can resubmit.",
+        "width": 1320,
+        "height": 500,
+        "color": 7
+      },
+      "id": "7551ccb0-4287-4c9f-a406-952b1e93c502"
+    },
+    {
+      "name": "Client opens approval link",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        2340
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "timesheet/approve",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "a738dd48-6f42-44ee-a714-434da9304859",
+      "id": "59d6787f-0735-40af-a849-28c54baf224d"
+    },
+    {
+      "name": "Load data (approve)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        2340
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a6d001a1-3ef1-40e4-a6ec-a0f642bbd569"
+    },
+    {
+      "name": "Approve or query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        2340
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// GET /webhook/timesheet/approve?t=TOKEN[&a=approve|query]: the client manager's one-click approval.\nconst config = configFrom('Config');\nconst q = $('Client opens approval link').first().json.query || {};\nconst token = String(q.t || '');\nconst action = String(q.a || '');\nconst ts = tableRows('Timesheets').find((t) => token && t.approve_token === token);\nconst agency = config.agency_name;\nconst empty = { updates: [], messages: [] };\n\nif (!ts) {\n  return [{ json: { ...empty, html: page('Link not found', agency, `<h1>This approval link is no longer valid</h1><p class=\"muted\">Please contact ${esc(agency)}.</p>`) } }];\n}\nconst temp = tableRows('Temps').find((t) => t.temp_id === ts.temp_id);\nconst client = tableRows('Clients').find((c) => c.client_id === ts.client_id);\nconst pay = round2(Number(ts.hours) * Number(temp.charge_rate));\nconst summary = `<table><tr><td>Worker</td><td>${esc(fullName(temp))}, ${esc(temp.role)}</td></tr><tr><td>Week ending</td><td>${esc(fmtDate(ts.week_ending))}</td></tr>\n<tr><td>Hours</td><td>${Number(ts.hours).toFixed(2)} (${esc(ts.daily_breakdown || '')})</td></tr><tr><td>Charge</td><td>${money(pay)} + VAT at ${money(temp.charge_rate)}/hr</td></tr>${ts.notes ? `<tr><td>Note</td><td>${esc(ts.notes)}</td></tr>` : ''}</table>`;\n\nif (ts.status !== 'submitted') {\n  return [{ json: { ...empty, html: page('Already done', agency, `<h1>Already ${esc(ts.status)}</h1>${summary}<p class=\"muted\">No further action needed.</p>`) } }];\n}\nif (action !== 'approve' && action !== 'query') {\n  const link = (a) => `${config.base_url}/webhook/timesheet/approve?t=${esc(token)}&a=${a}`;\n  return [{ json: { ...empty, html: page('Approve hours', agency, `<h1>Approve hours, ${esc(client.manager_name)}?</h1>${summary}\n  <a class=\"btn\" href=\"${link('approve')}\">Approve</a><a class=\"btn alt\" href=\"${link('query')}\">Query</a>`) } }];\n}\n\nconst weekLabel = new Date(ts.week_ending).toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' });\nif (action === 'approve') {\n  return [{ json: {\n    updates: [{ id: ts.id, status: 'approved', approved_at: nowIso(), approved_by: client.manager_name }],\n    messages: [{ channel: 'SMS', to_name: fullName(temp), to_address: temp.phone, subject: '', body: `Good news ${temp.first_name}: ${client.manager_name} approved your ${ts.hours} hours for w/e ${weekLabel}. They'll be paid on Friday.`, link: '', related: ts.timesheet_id, workflow: 'Timesheet approved' }],\n    html: page('Approved', agency, `<h1>Approved. Thank you, ${esc(client.manager_name.split(' ')[0])}.</h1><div class=\"ok\">${Number(ts.hours).toFixed(2)} hours for ${esc(fullName(temp))} are approved for payroll.</div>${summary}`),\n  } }];\n}\nreturn [{ json: {\n  updates: [{ id: ts.id, status: 'queried', queried_at: nowIso() }],\n  messages: [{ channel: 'Email', to_name: config.consultant_name, to_address: config.consultant_email, subject: `Query: ${client.name} queried ${fullName(temp)}'s hours (w/e ${weekLabel})`, body: `${client.manager_name} queried ${ts.hours} hours. Call the client, then the temp can resubmit from the same link.`, link: `${config.base_url}/webhook/console`, related: ts.timesheet_id, workflow: 'Timesheet queried' }],\n  html: page('Queried', agency, `<h1>Thanks, we'll look into it</h1><div class=\"warn\">${esc(config.consultant_name)} from ${esc(agency)} will call you about these hours today.</div>${summary}`),\n} }];\n"
+      },
+      "id": "7be557f5-366e-41c4-a46f-be38c0228e9d"
+    },
+    {
+      "name": "Decision",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        2340
+      ],
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "6cedbe96-6a51-4ba3-ab00-dcf5a379f924"
+    },
+    {
+      "name": "Save decision",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        2340
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Timesheets"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c3012fd5-d746-4150-a111-e710c4c3fc6e"
+    },
+    {
+      "name": "Notify",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        2480
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "842a9821-4095-4ee3-aba4-99416925b26f"
+    },
+    {
+      "name": "Text temp or alert consultant",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        2480
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfSendMessage01"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "d964e0e1-a9d2-420e-a405-3f07fa94032d"
+    },
+    {
+      "name": "Show approval page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        2620
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f7a79eda-f2bc-4157-a2c0-abdba53e75a0"
+    },
+    {
+      "name": "Lane: download",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        2800
+      ],
+      "parameters": {
+        "content": "### Download a payroll CSV\nOnly exact export file names are accepted.",
+        "width": 1120,
+        "height": 360,
+        "color": 7
+      },
+      "id": "e32b8cec-edd4-4d28-a796-1c6bbba85fa1"
+    },
+    {
+      "name": "Download payroll CSV",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        2880
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "payroll/file",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "9ffce0be-b981-46ff-ae2e-30031fc5faf3",
+      "id": "4aea4470-d42a-430b-a47a-ff6199c2d72e"
+    },
+    {
+      "name": "Check file name",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        2880
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n\n// GET /webhook/payroll/file?name=...: only plain export file names are accepted.\nconst name = String($('Download payroll CSV').first().json.query?.name || '');\nconst ok = /^payroll-we-\\d{4}-\\d{2}-\\d{2}-\\d{8}T\\d{4}\\.csv$/.test(name);\nconst html = ok ? '' : page('Not found', 'Harbourline Recruitment', '<h1>File not found</h1><p class=\"muted\">That export does not exist.</p>');\nreturn [{ json: { ok, filePath: ok ? 'payroll-exports/' + name : '', fileName: name, html } }];\n"
+      },
+      "id": "4b575790-d7e9-485d-a7c3-38ff837f0d51"
+    },
+    {
+      "name": "File name valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        2880
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "debaf35e-5e05-4753-a68b-46e537aa96c3",
+              "leftValue": "={{ String($json.ok ?? '') }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "17e31cc3-4525-43b4-a6f7-92a2e29a60da"
+    },
+    {
+      "name": "Read CSV file",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        600,
+        2880
+      ],
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "=D:/Software Development/automations/n8n/files/{{ $json.filePath }}",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "id": "aa496988-3ac3-4461-a5b6-2bfd85158fc1"
+    },
+    {
+      "name": "Send CSV",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        2880
+      ],
+      "parameters": {
+        "respondWith": "binary",
+        "responseDataSource": "automatically",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Disposition",
+                "value": "=attachment; filename=\"{{ $json.fileName.split('/').pop() }}\""
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "bdd7a432-65fc-4343-a379-b1e6f60143d9"
+    },
+    {
+      "name": "Not found page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        3020
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "045d71ac-6406-4341-a40a-1707048bdf05"
+    }
+  ],
+  "connections": {
+    "Run from console": {
+      "main": [
+        [
+          {
+            "node": "Export or chase?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every Monday 09:00": {
+      "main": [
+        [
+          {
+            "node": "Load data (chase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (chase)": {
+      "main": [
+        [
+          {
+            "node": "Plan chase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan chase": {
+      "main": [
+        [
+          {
+            "node": "Reminder counts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Chase messages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Chase result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder counts": {
+      "main": [
+        [
+          {
+            "node": "Update timesheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chase messages": {
+      "main": [
+        [
+          {
+            "node": "Send chase messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export or chase?": {
+      "main": [
+        [
+          {
+            "node": "Load data (export)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load data (chase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every Friday 12:00": {
+      "main": [
+        [
+          {
+            "node": "Load data (export)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (export)": {
+      "main": [
+        [
+          {
+            "node": "Build payroll CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build payroll CSV": {
+      "main": [
+        [
+          {
+            "node": "Anything to export?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything to export?": {
+      "main": [
+        [
+          {
+            "node": "Save CSV to files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Export result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save CSV to files": {
+      "main": [
+        [
+          {
+            "node": "Exported timesheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Export record",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Payroll email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Export result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exported timesheets": {
+      "main": [
+        [
+          {
+            "node": "Mark as exported",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export record": {
+      "main": [
+        [
+          {
+            "node": "Record export",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payroll email": {
+      "main": [
+        [
+          {
+            "node": "Send payroll email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Temp opens timesheet link": {
+      "main": [
+        [
+          {
+            "node": "Load data (form)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (form)": {
+      "main": [
+        [
+          {
+            "node": "Render timesheet form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render timesheet form": {
+      "main": [
+        [
+          {
+            "node": "Show form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Temp submits hours": {
+      "main": [
+        [
+          {
+            "node": "Load data (submit)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (submit)": {
+      "main": [
+        [
+          {
+            "node": "Save hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save hours": {
+      "main": [
+        [
+          {
+            "node": "Submitted hours",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Approval request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Show confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submitted hours": {
+      "main": [
+        [
+          {
+            "node": "Update timesheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approval request": {
+      "main": [
+        [
+          {
+            "node": "Email client manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client opens approval link": {
+      "main": [
+        [
+          {
+            "node": "Load data (approve)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (approve)": {
+      "main": [
+        [
+          {
+            "node": "Approve or query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve or query": {
+      "main": [
+        [
+          {
+            "node": "Decision",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Show approval page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision": {
+      "main": [
+        [
+          {
+            "node": "Save decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify": {
+      "main": [
+        [
+          {
+            "node": "Text temp or alert consultant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download payroll CSV": {
+      "main": [
+        [
+          {
+            "node": "Check file name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check file name": {
+      "main": [
+        [
+          {
+            "node": "File name valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File name valid?": {
+      "main": [
+        [
+          {
+            "node": "Read CSV file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not found page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read CSV file": {
+      "main": [
+        [
+          {
+            "node": "Send CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/London",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Chases missing timesheets by SMS, takes hours from a mobile form, gets one-click client approval and exports approved hours for payroll."
+  },
+  "tags": []
+}

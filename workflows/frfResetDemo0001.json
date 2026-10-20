@@ -1,0 +1,1517 @@
+{
+  "id": "frfResetDemo0001",
+  "name": "Demo · Reset data",
+  "nodes": [
+    {
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        60
+      ],
+      "parameters": {
+        "content": "## Demo · Reset data\nCreates the data tables (first run), clears them and loads the fictional Harbourline Recruitment data: a Monday morning with missing timesheets, expiring documents and umbrella evidence due.",
+        "width": 600,
+        "height": 160,
+        "color": 5
+      },
+      "id": "4556afec-f363-45a9-a01e-edd50af9f942"
+    },
+    {
+      "name": "When called by a workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "b5abfc7d-82d7-41bc-a1c0-abb3f8cdc743"
+    },
+    {
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        480
+      ],
+      "parameters": {},
+      "id": "108dd817-ee43-42fb-a2ae-dede5fef53f5"
+    },
+    {
+      "name": "Create Config",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Config",
+        "columns": {
+          "column": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "value",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "40589ab9-9dc3-45f7-aac2-d576f0f1706a"
+    },
+    {
+      "name": "Create Clients",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Clients",
+        "columns": {
+          "column": [
+            {
+              "name": "client_id",
+              "type": "string"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "site",
+              "type": "string"
+            },
+            {
+              "name": "manager_name",
+              "type": "string"
+            },
+            {
+              "name": "manager_email",
+              "type": "string"
+            },
+            {
+              "name": "manager_phone",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "7eea98f5-9c67-4f16-ab02-e095d4ab0146"
+    },
+    {
+      "name": "Create Umbrellas",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Umbrellas",
+        "columns": {
+          "column": [
+            {
+              "name": "umbrella_id",
+              "type": "string"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "contact_name",
+              "type": "string"
+            },
+            {
+              "name": "contact_email",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "39bf0ff0-645c-489e-a2f7-e562bae6c069"
+    },
+    {
+      "name": "Create Temps",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Temps",
+        "columns": {
+          "column": [
+            {
+              "name": "temp_id",
+              "type": "string"
+            },
+            {
+              "name": "first_name",
+              "type": "string"
+            },
+            {
+              "name": "last_name",
+              "type": "string"
+            },
+            {
+              "name": "phone",
+              "type": "string"
+            },
+            {
+              "name": "email",
+              "type": "string"
+            },
+            {
+              "name": "client_id",
+              "type": "string"
+            },
+            {
+              "name": "role",
+              "type": "string"
+            },
+            {
+              "name": "pay_route",
+              "type": "string"
+            },
+            {
+              "name": "pay_rate",
+              "type": "number"
+            },
+            {
+              "name": "charge_rate",
+              "type": "number"
+            },
+            {
+              "name": "compliance_status",
+              "type": "string"
+            },
+            {
+              "name": "compliance_checked_at",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "07b5153e-e599-4b62-abd1-9f237583c3c2"
+    },
+    {
+      "name": "Create Timesheets",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        940,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Timesheets",
+        "columns": {
+          "column": [
+            {
+              "name": "timesheet_id",
+              "type": "string"
+            },
+            {
+              "name": "week_ending",
+              "type": "string"
+            },
+            {
+              "name": "temp_id",
+              "type": "string"
+            },
+            {
+              "name": "client_id",
+              "type": "string"
+            },
+            {
+              "name": "hours",
+              "type": "number"
+            },
+            {
+              "name": "daily_breakdown",
+              "type": "string"
+            },
+            {
+              "name": "notes",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "submit_token",
+              "type": "string"
+            },
+            {
+              "name": "approve_token",
+              "type": "string"
+            },
+            {
+              "name": "submitted_at",
+              "type": "string"
+            },
+            {
+              "name": "approved_at",
+              "type": "string"
+            },
+            {
+              "name": "approved_by",
+              "type": "string"
+            },
+            {
+              "name": "reminders_sent",
+              "type": "number"
+            },
+            {
+              "name": "last_reminder_at",
+              "type": "string"
+            },
+            {
+              "name": "exported_at",
+              "type": "string"
+            },
+            {
+              "name": "export_file",
+              "type": "string"
+            },
+            {
+              "name": "queried_at",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "11f4c36c-4a57-42e1-a620-06e9548c3442"
+    },
+    {
+      "name": "Create Documents",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Documents",
+        "columns": {
+          "column": [
+            {
+              "name": "doc_id",
+              "type": "string"
+            },
+            {
+              "name": "temp_id",
+              "type": "string"
+            },
+            {
+              "name": "doc_type",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "expiry_date",
+              "type": "string"
+            },
+            {
+              "name": "upload_token",
+              "type": "string"
+            },
+            {
+              "name": "file_name",
+              "type": "string"
+            },
+            {
+              "name": "original_name",
+              "type": "string"
+            },
+            {
+              "name": "received_at",
+              "type": "string"
+            },
+            {
+              "name": "reminders_sent",
+              "type": "number"
+            },
+            {
+              "name": "last_reminder_at",
+              "type": "string"
+            },
+            {
+              "name": "verified_at",
+              "type": "string"
+            },
+            {
+              "name": "verified_by",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "bc12935a-abb2-4ca7-ac46-8508b4c7c21c"
+    },
+    {
+      "name": "Create Evidence",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Evidence",
+        "columns": {
+          "column": [
+            {
+              "name": "evidence_id",
+              "type": "string"
+            },
+            {
+              "name": "umbrella_id",
+              "type": "string"
+            },
+            {
+              "name": "period",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "upload_token",
+              "type": "string"
+            },
+            {
+              "name": "requested_at",
+              "type": "string"
+            },
+            {
+              "name": "received_at",
+              "type": "string"
+            },
+            {
+              "name": "reminders_sent",
+              "type": "number"
+            },
+            {
+              "name": "last_reminder_at",
+              "type": "string"
+            },
+            {
+              "name": "file_name",
+              "type": "string"
+            },
+            {
+              "name": "lines",
+              "type": "number"
+            },
+            {
+              "name": "flags",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "6d3b40f4-8ea8-457a-a802-6924d85017da"
+    },
+    {
+      "name": "Create Payslip checks",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1480,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Payslip checks",
+        "columns": {
+          "column": [
+            {
+              "name": "evidence_id",
+              "type": "string"
+            },
+            {
+              "name": "umbrella_id",
+              "type": "string"
+            },
+            {
+              "name": "period",
+              "type": "string"
+            },
+            {
+              "name": "temp_id",
+              "type": "string"
+            },
+            {
+              "name": "worker_name",
+              "type": "string"
+            },
+            {
+              "name": "hours",
+              "type": "number"
+            },
+            {
+              "name": "approved_hours",
+              "type": "number"
+            },
+            {
+              "name": "expected_income",
+              "type": "number"
+            },
+            {
+              "name": "assignment_income",
+              "type": "number"
+            },
+            {
+              "name": "gross_taxable_pay",
+              "type": "number"
+            },
+            {
+              "name": "gross_per_hour",
+              "type": "number"
+            },
+            {
+              "name": "non_taxable_payments",
+              "type": "number"
+            },
+            {
+              "name": "result",
+              "type": "string"
+            },
+            {
+              "name": "reasons",
+              "type": "string"
+            },
+            {
+              "name": "checked_at",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "23e41691-0e10-4f33-a7a2-9c6ff44b3252"
+    },
+    {
+      "name": "Create Outbox",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1660,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Outbox",
+        "columns": {
+          "column": [
+            {
+              "name": "created_at",
+              "type": "string"
+            },
+            {
+              "name": "channel",
+              "type": "string"
+            },
+            {
+              "name": "to_name",
+              "type": "string"
+            },
+            {
+              "name": "to_address",
+              "type": "string"
+            },
+            {
+              "name": "subject",
+              "type": "string"
+            },
+            {
+              "name": "body",
+              "type": "string"
+            },
+            {
+              "name": "link",
+              "type": "string"
+            },
+            {
+              "name": "related",
+              "type": "string"
+            },
+            {
+              "name": "workflow",
+              "type": "string"
+            },
+            {
+              "name": "delivery",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "c8a49487-9b89-4f31-a196-83b64c2fff22"
+    },
+    {
+      "name": "Create Exports",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1840,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Exports",
+        "columns": {
+          "column": [
+            {
+              "name": "file_name",
+              "type": "string"
+            },
+            {
+              "name": "week_ending",
+              "type": "string"
+            },
+            {
+              "name": "rows",
+              "type": "number"
+            },
+            {
+              "name": "pay_total",
+              "type": "number"
+            },
+            {
+              "name": "invoice_total",
+              "type": "number"
+            },
+            {
+              "name": "created_at",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "e5c28c8d-6c34-4048-aa3b-f96363ecfdef"
+    },
+    {
+      "name": "Clear Config",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Config"
+        }
+      },
+      "executeOnce": true,
+      "id": "412e15a4-40c6-4835-a468-bf6e0d2d04e0"
+    },
+    {
+      "name": "Clear Clients",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Clients"
+        }
+      },
+      "executeOnce": true,
+      "id": "9e0d00bb-7489-4b0e-ab65-c0c02f3621ca"
+    },
+    {
+      "name": "Clear Umbrellas",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        580,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Umbrellas"
+        }
+      },
+      "executeOnce": true,
+      "id": "97d11aa4-b677-4644-aee0-5c71a70ee386"
+    },
+    {
+      "name": "Clear Temps",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Temps"
+        }
+      },
+      "executeOnce": true,
+      "id": "dec3a3ed-4960-4ace-a61c-8d1eafb82d80"
+    },
+    {
+      "name": "Clear Timesheets",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        940,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Timesheets"
+        }
+      },
+      "executeOnce": true,
+      "id": "c4f7ef1e-f7d3-4571-a358-c7f57da5cdee"
+    },
+    {
+      "name": "Clear Documents",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Documents"
+        }
+      },
+      "executeOnce": true,
+      "id": "d184992e-d126-4087-a432-679f6754fd2c"
+    },
+    {
+      "name": "Clear Evidence",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Evidence"
+        }
+      },
+      "executeOnce": true,
+      "id": "9756311a-efe6-4703-a556-b2296e4c3cc7"
+    },
+    {
+      "name": "Clear Payslip checks",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1480,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Payslip checks"
+        }
+      },
+      "executeOnce": true,
+      "id": "c60435e3-2bd6-4f4a-a654-ffc7f3b1dd5b"
+    },
+    {
+      "name": "Clear Outbox",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1660,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        }
+      },
+      "executeOnce": true,
+      "id": "ace2b861-f597-4154-ae01-b17fa7c361f5"
+    },
+    {
+      "name": "Clear Exports",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1840,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Exports"
+        }
+      },
+      "executeOnce": true,
+      "id": "195c1ae2-1f2e-4f05-a012-46110f1939a9"
+    },
+    {
+      "name": "Build demo data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2020,
+        520
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\nconst DEMO_DATA = {\"CONFIG\":[{\"key\":\"agency_name\",\"value\":\"Harbourline Recruitment\"},{\"key\":\"consultant_name\",\"value\":\"Sophie Clarke\"},{\"key\":\"consultant_email\",\"value\":\"sophie.clarke@harbourline.example\"},{\"key\":\"payroll_email\",\"value\":\"payroll@harbourline.example\"},{\"key\":\"compliance_email\",\"value\":\"compliance@harbourline.example\"},{\"key\":\"base_url\",\"value\":\"http://localhost:5678\"},{\"key\":\"national_living_wage\",\"value\":\"12.71\"},{\"key\":\"sms_enabled\",\"value\":\"false\"},{\"key\":\"email_enabled\",\"value\":\"false\"}],\"CLIENTS\":[{\"client_id\":\"C001\",\"name\":\"Meridian Logistics Ltd\",\"site\":\"Warehouse, Daventry\",\"manager_name\":\"Dan Whitfield\",\"manager_email\":\"dan.whitfield@meridian.example\",\"manager_phone\":\"+447700900101\"},{\"client_id\":\"C002\",\"name\":\"Kestrel Foods Ltd\",\"site\":\"Production, Leeds\",\"manager_name\":\"Priya Shah\",\"manager_email\":\"priya.shah@kestrelfoods.example\",\"manager_phone\":\"+447700900102\"},{\"client_id\":\"C003\",\"name\":\"Alder & Finch Facilities\",\"site\":\"Office services, Manchester\",\"manager_name\":\"Tom Reeves\",\"manager_email\":\"tom.reeves@alderfinch.example\",\"manager_phone\":\"+447700900103\"}],\"UMBRELLAS\":[{\"umbrella_id\":\"U001\",\"name\":\"Northstar Umbrella Ltd\",\"contact_name\":\"Payroll team\",\"contact_email\":\"payroll@northstar-umbrella.example\"},{\"umbrella_id\":\"U002\",\"name\":\"Clearwater Umbrella Ltd\",\"contact_name\":\"Compliance desk\",\"contact_email\":\"compliance@clearwater-umbrella.example\"}],\"TEMPS\":[{\"temp_id\":\"T001\",\"first_name\":\"Aisha\",\"last_name\":\"Khan\",\"phone\":\"+447700900201\",\"email\":\"aisha.khan@mail.example\",\"client_id\":\"C001\",\"role\":\"Warehouse operative\",\"pay_route\":\"PAYE\",\"pay_rate\":13.5,\"charge_rate\":18.9},{\"temp_id\":\"T002\",\"first_name\":\"Jake\",\"last_name\":\"Morris\",\"phone\":\"+447700900202\",\"email\":\"jake.morris@mail.example\",\"client_id\":\"C001\",\"role\":\"Forklift driver\",\"pay_route\":\"U001\",\"pay_rate\":17.2,\"charge_rate\":20.6},{\"temp_id\":\"T003\",\"first_name\":\"Olivia\",\"last_name\":\"Bennett\",\"phone\":\"+447700900203\",\"email\":\"olivia.bennett@mail.example\",\"client_id\":\"C002\",\"role\":\"Production operative\",\"pay_route\":\"PAYE\",\"pay_rate\":13,\"charge_rate\":18.2},{\"temp_id\":\"T004\",\"first_name\":\"Marek\",\"last_name\":\"Nowak\",\"phone\":\"+447700900204\",\"email\":\"marek.nowak@mail.example\",\"client_id\":\"C002\",\"role\":\"Line leader\",\"pay_route\":\"U002\",\"pay_rate\":16.8,\"charge_rate\":20.1},{\"temp_id\":\"T005\",\"first_name\":\"Chloe\",\"last_name\":\"Davies\",\"phone\":\"+447700900205\",\"email\":\"chloe.davies@mail.example\",\"client_id\":\"C003\",\"role\":\"Receptionist\",\"pay_route\":\"PAYE\",\"pay_rate\":14.2,\"charge_rate\":19.9},{\"temp_id\":\"T006\",\"first_name\":\"Samuel\",\"last_name\":\"Okoro\",\"phone\":\"+447700900206\",\"email\":\"samuel.okoro@mail.example\",\"client_id\":\"C001\",\"role\":\"Forklift driver\",\"pay_route\":\"U001\",\"pay_rate\":17.2,\"charge_rate\":20.6},{\"temp_id\":\"T007\",\"first_name\":\"Hannah\",\"last_name\":\"Lewis\",\"phone\":\"+447700900207\",\"email\":\"hannah.lewis@mail.example\",\"client_id\":\"C003\",\"role\":\"Facilities coordinator\",\"pay_route\":\"U002\",\"pay_rate\":18,\"charge_rate\":21.6},{\"temp_id\":\"T008\",\"first_name\":\"Ryan\",\"last_name\":\"Patel\",\"phone\":\"+447700900208\",\"email\":\"ryan.patel@mail.example\",\"client_id\":\"C002\",\"role\":\"Production operative\",\"pay_route\":\"PAYE\",\"pay_rate\":13,\"charge_rate\":18.2}],\"TIMESHEETS_THIS_WEEK\":[{\"temp_id\":\"T001\",\"status\":\"missing\"},{\"temp_id\":\"T002\",\"status\":\"approved\",\"hours\":42},{\"temp_id\":\"T003\",\"status\":\"missing\"},{\"temp_id\":\"T004\",\"status\":\"submitted\",\"hours\":40},{\"temp_id\":\"T005\",\"status\":\"approved\",\"hours\":37.5},{\"temp_id\":\"T006\",\"status\":\"missing\"},{\"temp_id\":\"T007\",\"status\":\"approved\",\"hours\":35},{\"temp_id\":\"T008\",\"status\":\"missing\"}],\"LAST_MONTH_HOURS\":{\"T002\":[40,40,40,40],\"T004\":[40,40,40,40],\"T006\":[38,36,40,36],\"T007\":[35,35,35,35]},\"DOCUMENTS\":[{\"temp_id\":\"T001\",\"doc_type\":\"Right to work\",\"status\":\"verified\",\"expires_in_days\":null},{\"temp_id\":\"T001\",\"doc_type\":\"Site induction\",\"status\":\"verified\",\"expires_in_days\":169},{\"temp_id\":\"T002\",\"doc_type\":\"Right to work\",\"status\":\"verified\",\"expires_in_days\":null},{\"temp_id\":\"T002\",\"doc_type\":\"Forklift licence\",\"status\":\"verified\",\"expires_in_days\":260},{\"temp_id\":\"T003\",\"doc_type\":\"Right to work\",\"status\":\"verified\",\"expires_in_days\":null},{\"temp_id\":\"T003\",\"doc_type\":\"Food hygiene certificate\",\"status\":\"verified\",\"expires_in_days\":94},{\"temp_id\":\"T004\",\"doc_type\":\"Right to work\",\"status\":\"verified\",\"expires_in_days\":14},{\"temp_id\":\"T004\",\"doc_type\":\"Food hygiene certificate\",\"status\":\"verified\",\"expires_in_days\":138},{\"temp_id\":\"T005\",\"doc_type\":\"Right to work\",\"status\":\"verified\",\"expires_in_days\":null},{\"temp_id\":\"T005\",\"doc_type\":\"Basic DBS check\",\"status\":\"received\",\"expires_in_days\":null},{\"temp_id\":\"T006\",\"doc_type\":\"Right to work\",\"status\":\"verified\",\"expires_in_days\":null},{\"temp_id\":\"T006\",\"doc_type\":\"Forklift licence\",\"status\":\"verified\",\"expires_in_days\":-12},{\"temp_id\":\"T007\",\"doc_type\":\"Right to work\",\"status\":\"verified\",\"expires_in_days\":null},{\"temp_id\":\"T007\",\"doc_type\":\"Basic DBS check\",\"status\":\"verified\",\"expires_in_days\":null},{\"temp_id\":\"T008\",\"doc_type\":\"Right to work\",\"status\":\"verified\",\"expires_in_days\":null},{\"temp_id\":\"T008\",\"doc_type\":\"Food hygiene certificate\",\"status\":\"missing\",\"expires_in_days\":null}]};\n// Builds the Monday-morning starting point for the demo. DEMO_DATA is injected by the build script\n// from scripts/demo-data.mjs. All dates are worked out from today, so every reset tells the same story:\n// last week's timesheets are due, one right to work expires in 14 days, one licence expired 12 days ago,\n// and last month's umbrella evidence is due. Returns one item with an array of rows per data table.\nconst D = DEMO_DATA;\nconst now = nowIso();\nconst DAY = 86400000;\nconst iso = (d) => d.toISOString().slice(0, 10);\nconst today = new Date(`${iso(new Date())}T00:00:00Z`);\n\n// Last completed week: the most recent Sunday before today.\nconst back = today.getUTCDay() === 0 ? 7 : today.getUTCDay();\nconst weekEnding = iso(new Date(today.getTime() - back * DAY));\n// Evidence period: the calendar month before that week's month (never overlaps \"last week\").\nconst we = new Date(`${weekEnding}T00:00:00Z`);\nconst periodStart = new Date(Date.UTC(we.getUTCFullYear(), we.getUTCMonth() - 1, 1));\nconst period = iso(periodStart).slice(0, 7);\nconst monthWeeks = [];\nfor (let d = new Date(periodStart); d.getUTCMonth() === periodStart.getUTCMonth(); d = new Date(d.getTime() + DAY)) {\n  if (d.getUTCDay() === 0) monthWeeks.push(iso(d));\n}\nconst lastMonthWeeks = monthWeeks.slice(0, 4);\n\nconst config = [...D.CONFIG, { key: 'week_ending', value: weekEnding }, { key: 'evidence_period', value: period }];\nconst temps = D.TEMPS.map((t) => ({ ...t, compliance_status: '', compliance_checked_at: '' }));\nconst T = Object.fromEntries(temps.map((t) => [t.temp_id, t]));\n\nconst timesheets = [];\nD.TIMESHEETS_THIS_WEEK.forEach((s) => {\n  const t = T[s.temp_id];\n  const submitted = s.status !== 'missing';\n  timesheets.push({\n    timesheet_id: `TS-${weekEnding}-${s.temp_id}`, week_ending: weekEnding, temp_id: s.temp_id, client_id: t.client_id,\n    hours: s.hours || 0, daily_breakdown: submitted ? 'Mon–Fri' : '', notes: '', status: s.status,\n    submit_token: newToken(), approve_token: submitted ? newToken() : '',\n    submitted_at: submitted ? now : '', approved_at: s.status === 'approved' ? now : '', approved_by: s.status === 'approved' ? 'Client manager' : '',\n    reminders_sent: 0, last_reminder_at: '', exported_at: '', export_file: '', queried_at: '',\n  });\n});\nObject.entries(D.LAST_MONTH_HOURS).forEach(([tempId, weeks]) => {\n  weeks.forEach((h, i) => {\n    const week = lastMonthWeeks[i];\n    if (!week) return;\n    timesheets.push({\n      timesheet_id: `TS-${week}-${tempId}`, week_ending: week, temp_id: tempId, client_id: T[tempId].client_id, hours: h,\n      daily_breakdown: 'Mon–Fri', notes: '', status: 'exported', submit_token: newToken(), approve_token: newToken(),\n      submitted_at: `${week}T18:00:00.000Z`, approved_at: `${week}T20:00:00.000Z`, approved_by: 'Client manager',\n      reminders_sent: 0, last_reminder_at: '', exported_at: `${week}T22:00:00.000Z`, export_file: `payroll-we-${week}.csv`, queried_at: '',\n    });\n  });\n});\n\nconst documents = D.DOCUMENTS.map((d, i) => ({\n  doc_id: `D${String(i + 1).padStart(3, '0')}`, temp_id: d.temp_id, doc_type: d.doc_type, status: d.status,\n  expiry_date: d.expires_in_days === null ? '' : iso(new Date(today.getTime() + d.expires_in_days * DAY)),\n  upload_token: newToken(), file_name: '', original_name: '', received_at: d.status === 'missing' ? '' : now, reminders_sent: 0, last_reminder_at: '',\n}));\n\nreturn [{ json: {\n  Config: config, Clients: D.CLIENTS, Umbrellas: D.UMBRELLAS, Temps: temps, Timesheets: timesheets, Documents: documents,\n  summary: `Demo data reset: week ending ${weekEnding}, umbrella evidence for ${period}.`,\n} }];\n"
+      },
+      "id": "61fdd499-329b-459e-ac5b-1245478b963b"
+    },
+    {
+      "name": "Rows: Config",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        300
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Config",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "0ea05a0b-376b-4d7e-ac70-1315bd3fea75"
+    },
+    {
+      "name": "Insert Config",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Config"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "9ca12d49-6fb9-428f-a7d9-572b167f6d33"
+    },
+    {
+      "name": "Rows: Clients",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        450
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Clients",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "7dd76e47-f77d-4710-a870-edaa17653564"
+    },
+    {
+      "name": "Insert Clients",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        450
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Clients"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "db2c0f56-bd19-44f7-a149-e0a1160724be"
+    },
+    {
+      "name": "Rows: Umbrellas",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        600
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Umbrellas",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "7848f621-06e9-4163-a1c3-b32ec3f73401"
+    },
+    {
+      "name": "Insert Umbrellas",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        600
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Umbrellas"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "8038eba7-bb27-4ef9-af20-c2ed2126dca9"
+    },
+    {
+      "name": "Rows: Temps",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        750
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Temps",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "e39c73f9-1409-4d7d-a41a-db15861075e1"
+    },
+    {
+      "name": "Insert Temps",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        750
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Temps"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "2efee1dd-2fcf-49be-a5f7-10f9069134ca"
+    },
+    {
+      "name": "Rows: Timesheets",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        900
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Timesheets",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "94c57398-e145-475b-adcd-6c5f5d18106e"
+    },
+    {
+      "name": "Insert Timesheets",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        900
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Timesheets"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "3d36db91-30cc-43f2-ace5-d9b7bc3ec8fe"
+    },
+    {
+      "name": "Rows: Documents",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        1050
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Documents",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "bbdb2ed5-f01a-47fc-af97-af093f122465"
+    },
+    {
+      "name": "Insert Documents",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        1050
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Documents"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "819f38dd-475c-4529-a496-965f8b638bfb"
+    },
+    {
+      "name": "Done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        1200
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\nreturn [{ json: { summary: $('Build demo data').first().json.summary } }];"
+      },
+      "id": "78d7849f-42d6-487d-ac40-0c82e65e0ab5"
+    }
+  ],
+  "connections": {
+    "When called by a workflow": {
+      "main": [
+        [
+          {
+            "node": "Create Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Create Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Config": {
+      "main": [
+        [
+          {
+            "node": "Create Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Clients": {
+      "main": [
+        [
+          {
+            "node": "Create Umbrellas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Umbrellas": {
+      "main": [
+        [
+          {
+            "node": "Create Temps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Temps": {
+      "main": [
+        [
+          {
+            "node": "Create Timesheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Timesheets": {
+      "main": [
+        [
+          {
+            "node": "Create Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Documents": {
+      "main": [
+        [
+          {
+            "node": "Create Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Evidence": {
+      "main": [
+        [
+          {
+            "node": "Create Payslip checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Payslip checks": {
+      "main": [
+        [
+          {
+            "node": "Create Outbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Outbox": {
+      "main": [
+        [
+          {
+            "node": "Create Exports",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Exports": {
+      "main": [
+        [
+          {
+            "node": "Clear Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Config": {
+      "main": [
+        [
+          {
+            "node": "Clear Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Clients": {
+      "main": [
+        [
+          {
+            "node": "Clear Umbrellas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Umbrellas": {
+      "main": [
+        [
+          {
+            "node": "Clear Temps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Temps": {
+      "main": [
+        [
+          {
+            "node": "Clear Timesheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Timesheets": {
+      "main": [
+        [
+          {
+            "node": "Clear Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Documents": {
+      "main": [
+        [
+          {
+            "node": "Clear Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Evidence": {
+      "main": [
+        [
+          {
+            "node": "Clear Payslip checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Payslip checks": {
+      "main": [
+        [
+          {
+            "node": "Clear Outbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Outbox": {
+      "main": [
+        [
+          {
+            "node": "Clear Exports",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Exports": {
+      "main": [
+        [
+          {
+            "node": "Build demo data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build demo data": {
+      "main": [
+        [
+          {
+            "node": "Rows: Config",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Clients",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Umbrellas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Temps",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Timesheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Documents",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Config": {
+      "main": [
+        [
+          {
+            "node": "Insert Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Clients": {
+      "main": [
+        [
+          {
+            "node": "Insert Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Umbrellas": {
+      "main": [
+        [
+          {
+            "node": "Insert Umbrellas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Temps": {
+      "main": [
+        [
+          {
+            "node": "Insert Temps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Timesheets": {
+      "main": [
+        [
+          {
+            "node": "Insert Timesheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Documents": {
+      "main": [
+        [
+          {
+            "node": "Insert Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/London",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Creates the data tables if needed and reloads the fictional Monday-morning demo data."
+  },
+  "tags": []
+}

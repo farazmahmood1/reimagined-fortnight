@@ -1,0 +1,425 @@
+{
+  "id": "frfLoadData00001",
+  "name": "Shared · Load data",
+  "nodes": [
+    {
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        80
+      ],
+      "parameters": {
+        "content": "## Shared · Load data\nReads the agency data in one go so each automation starts with a complete picture.\n\nIn a live agency this is where the ATS / payroll API calls go.",
+        "width": 520,
+        "height": 150,
+        "color": 5
+      },
+      "id": "44fec302-a175-4701-a8fc-346a014bc91d"
+    },
+    {
+      "name": "When called by a workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "7dd32e97-49e6-4d3a-a696-49350ab94757"
+    },
+    {
+      "name": "Config",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Config"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "533c9cee-52d0-4453-abb4-8a131b829000"
+    },
+    {
+      "name": "Clients",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Clients"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "7e4d4f06-ed46-469d-af73-da826543ba85"
+    },
+    {
+      "name": "Umbrellas",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        620,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Umbrellas"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "59655448-b67f-455a-a930-393cf537d57f"
+    },
+    {
+      "name": "Temps",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        820,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Temps"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "60766d8f-4aae-48c6-ad9f-470e1709f899"
+    },
+    {
+      "name": "Timesheets",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1020,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Timesheets"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "d83bb5cf-e78d-47a9-a3af-e66ea744641b"
+    },
+    {
+      "name": "Documents",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1220,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Documents"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "c8a505f4-c634-4311-a9ea-11f06251f5dc"
+    },
+    {
+      "name": "Evidence",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1420,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Evidence"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "da7ad4eb-6c2a-4be9-ae25-18365309d60b"
+    },
+    {
+      "name": "Payslip checks",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1620,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Payslip checks"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "94c96f25-af85-41f9-a135-49dfe56d0c0c"
+    },
+    {
+      "name": "Outbox",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1820,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "3205334c-b901-49aa-ac43-ad39b9b2fb74"
+    },
+    {
+      "name": "Exports",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2020,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Exports"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "7bba909e-9ec1-4dc4-a9d6-ae4c430afd8b"
+    },
+    {
+      "name": "Bundle tables",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\nconst tables = [\"Config\",\"Clients\",\"Umbrellas\",\"Temps\",\"Timesheets\",\"Documents\",\"Evidence\",\"Payslip checks\",\"Outbox\",\"Exports\"];\nconst out = {};\nfor (const t of tables) out[t] = $(t).all().map((i) => i.json).filter((r) => r && r.id !== undefined);\nreturn [{ json: out }];"
+      },
+      "id": "baf1abe5-0478-435e-aad3-580ac63b5d8b"
+    }
+  ],
+  "connections": {
+    "When called by a workflow": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clients": {
+      "main": [
+        [
+          {
+            "node": "Umbrellas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Umbrellas": {
+      "main": [
+        [
+          {
+            "node": "Temps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Temps": {
+      "main": [
+        [
+          {
+            "node": "Timesheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timesheets": {
+      "main": [
+        [
+          {
+            "node": "Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Documents": {
+      "main": [
+        [
+          {
+            "node": "Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evidence": {
+      "main": [
+        [
+          {
+            "node": "Payslip checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payslip checks": {
+      "main": [
+        [
+          {
+            "node": "Outbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outbox": {
+      "main": [
+        [
+          {
+            "node": "Exports",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exports": {
+      "main": [
+        [
+          {
+            "node": "Bundle tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/London",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Reads every data table once and returns one item with an array per table. Stands in for the agency ATS and payroll API."
+  },
+  "tags": []
+}

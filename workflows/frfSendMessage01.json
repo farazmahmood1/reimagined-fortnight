@@ -1,0 +1,274 @@
+{
+  "id": "frfSendMessage01",
+  "name": "Shared · Send message",
+  "nodes": [
+    {
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        40
+      ],
+      "parameters": {
+        "content": "## Shared · Send message\nEvery automation hands its texts and emails to this workflow.\n\n**Demo mode:** messages are logged to the Outbox table only.\n**Live:** add Twilio and SMTP credentials, enable the two grey nodes, then set `sms_enabled` / `email_enabled` to `true` in the Config table.",
+        "width": 560,
+        "height": 190,
+        "color": 5
+      },
+      "id": "79d9b640-e797-48a0-ae21-961925b16b4b"
+    },
+    {
+      "name": "When called by a workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        320
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "7bf1c369-91bf-4438-a188-9928d5c64276"
+    },
+    {
+      "name": "Config",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        320
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Config"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "b2f471e0-1c40-42a2-acd2-bad62a17186f"
+    },
+    {
+      "name": "Prepare messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        320
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\nconst cfg = configFromRows($('Config').all().map((i) => i.json));\nfunction configFromRows(rows) { return Object.fromEntries(rows.filter((r) => r && r.key).map((r) => [r.key, r.value])); }\nconst live = (channel) => (channel === 'SMS' ? cfg.sms_enabled : cfg.email_enabled) === 'true';\nconst msgs = $('When called by a workflow').all().map((i) => i.json).filter((m) => m && m.to_address && m.body);\nreturn msgs.map((m, i) => ({ json: {\n  created_at: new Date(Date.now() + i).toISOString(), channel: m.channel, to_name: m.to_name || '', to_address: m.to_address,\n  subject: m.subject || '', body: m.body, link: m.link || '', related: m.related || '', workflow: m.workflow || '',\n  delivery: live(m.channel) ? (m.channel === 'SMS' ? 'Sent by SMS (Twilio)' : 'Sent by email (SMTP)') : 'Demo mode: logged, not sent',\n} }));"
+      },
+      "id": "1d92773f-0d80-4024-a953-a6b99de7589d"
+    },
+    {
+      "name": "Log to Outbox",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        320
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "dc2b87bc-92c9-4c4e-a049-d81b205de7ce"
+    },
+    {
+      "name": "SMS to send",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        200
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\nreturn $input.all().filter((i) => i.json.channel === 'SMS' && String(i.json.delivery).startsWith('Sent'));"
+      },
+      "id": "62a8f757-4f58-4b18-aaa6-6dc51df9e902"
+    },
+    {
+      "name": "Send SMS (Twilio)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        200
+      ],
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "+447700900000",
+        "to": "={{ $json.to_address }}",
+        "message": "={{ $json.body }}{{ $json.link ? ' ' + $json.link : '' }}",
+        "options": {}
+      },
+      "disabled": true,
+      "notes": "Add your Twilio credential and sender number, then enable.",
+      "id": "c7a88b55-bd86-470a-a0d2-b910420a501c"
+    },
+    {
+      "name": "Emails to send",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        420
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\nreturn $input.all().filter((i) => i.json.channel === 'Email' && String(i.json.delivery).startsWith('Sent'));"
+      },
+      "id": "0d2e8f14-f346-4322-a9ac-a3af4e2a4eb3"
+    },
+    {
+      "name": "Send email (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        420
+      ],
+      "parameters": {
+        "operation": "send",
+        "fromEmail": "automations@harbourline.example",
+        "toEmail": "={{ $json.to_address }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.body }}\n\n{{ $json.link }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "disabled": true,
+      "notes": "Add your SMTP credential and sender address, then enable.",
+      "id": "5dea1431-e8ae-4e87-ac8b-7d686852fcf5"
+    },
+    {
+      "name": "Done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        600
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\nreturn [{ json: { summary: `Logged ${$('Log to Outbox').all().length} message(s).` } }];"
+      },
+      "id": "3f9636b3-eaa7-4c4f-a046-cf2d14724421"
+    }
+  ],
+  "connections": {
+    "When called by a workflow": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Prepare messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare messages": {
+      "main": [
+        [
+          {
+            "node": "Log to Outbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Outbox": {
+      "main": [
+        [
+          {
+            "node": "SMS to send",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Emails to send",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS to send": {
+      "main": [
+        [
+          {
+            "node": "Send SMS (Twilio)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emails to send": {
+      "main": [
+        [
+          {
+            "node": "Send email (SMTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/London",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "The only workflow that sends SMS or email. Demo mode logs everything to the Outbox table."
+  },
+  "tags": []
+}

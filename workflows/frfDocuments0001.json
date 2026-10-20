@@ -1,0 +1,1253 @@
+{
+  "id": "frfDocuments0001",
+  "name": "2 · Compliance documents: request → expiry alerts → verify",
+  "nodes": [
+    {
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        -200
+      ],
+      "parameters": {
+        "content": "## 2 · Compliance documents: request → expiry alerts → verify\nDaily: missing document → upload request · expiring within 30 days → reminder · expired → \"do not book\" alert · uploaded → consultant verifies.\nEach temp's compliance status is written back so the booking team can see it.",
+        "width": 1700,
+        "height": 140,
+        "color": 5
+      },
+      "id": "0c9201eb-3894-47b2-aafa-597a0c4d9d32"
+    },
+    {
+      "name": "Lane: check",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        -20
+      ],
+      "parameters": {
+        "content": "### Daily 08:00 (or from the console): document check\nNever messages the same person about the same document twice in 24 hours.",
+        "width": 1320,
+        "height": 640,
+        "color": 7
+      },
+      "id": "d1dc01cf-901a-4619-a7ea-8624115989d6"
+    },
+    {
+      "name": "Every day 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        60
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "d63ed2a0-cba8-406a-a2a7-a354193b47b8"
+    },
+    {
+      "name": "Run from console",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "05b8d744-4643-469d-a3e5-cd80b54858f1"
+    },
+    {
+      "name": "Load data (check)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        60
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "9b15e196-de7f-4dfb-a849-88085eb4bc74"
+    },
+    {
+      "name": "Plan document check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        60
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// Daily document check: request missing documents, warn before expiry, block expired ones,\n// and ask the consultant to verify uploads. Never messages the same person about the same\n// document twice in 24 hours. Returns { docUpdates, tempUpdates, messages, summary }.\nconst config = configFrom('Config');\nconst base = config.base_url;\nconst temps = tableRows('Temps');\nconst T = Object.fromEntries(temps.map((t) => [t.temp_id, t]));\nconst C = Object.fromEntries(tableRows('Clients').map((c) => [c.client_id, c]));\nconst docs = tableRows('Documents');\nconst today = new Date(new Date().toISOString().slice(0, 10));\nconst daysTo = (d) => Math.round((new Date(d) - today) / 86400000);\nconst recentlyReminded = (d) => d.last_reminder_at && Date.now() - new Date(d.last_reminder_at).getTime() < 24 * 3600 * 1000;\nconst longDate = (d) => new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric' });\n\nconst stateOf = (d) => {\n  if (d.status === 'missing') return 'missing';\n  if (d.expiry_date) {\n    const n = daysTo(d.expiry_date);\n    if (n < 0) return 'expired';\n    if (n <= 30 && d.status === 'verified') return 'expiring';\n  }\n  return d.status; // received | verified\n};\n\nconst docUpdates = [];\nconst messages = [];\nconst blocked = [];\nconst actions = [];\nconst toVerify = [];\nlet skipped = 0;\n\nfor (const d of docs) {\n  const state = stateOf(d);\n  const temp = T[d.temp_id];\n  if (!temp) continue;\n  const link = `${base}/webhook/documents/upload?t=${d.upload_token}`;\n  if (state === 'received') { toVerify.push(`${fullName(temp)}: ${d.doc_type}`); continue; }\n  if (state === 'verified') continue;\n  if (state === 'expired') blocked.push(`${fullName(temp)}: ${d.doc_type} expired ${longDate(d.expiry_date)}`);\n  if (state === 'missing' && d.doc_type === 'Right to work') blocked.push(`${fullName(temp)}: right to work not on file`);\n  if (state === 'missing' || state === 'expiring') actions.push(`${fullName(temp)}: ${d.doc_type} ${state === 'missing' ? 'missing' : 'expires ' + longDate(d.expiry_date)}`);\n  if (recentlyReminded(d)) { skipped++; continue; }\n  const body = {\n    missing: `Hi ${temp.first_name}, it's ${config.agency_name}. We still need your ${d.doc_type} before your next shift at ${C[temp.client_id].name}. Upload a photo or PDF here:`,\n    expiring: `Hi ${temp.first_name}, your ${d.doc_type} on file expires on ${longDate(d.expiry_date)} (${daysTo(d.expiry_date)} days). Please upload the renewal here so your shifts aren't affected:`,\n    expired: `Hi ${temp.first_name}, your ${d.doc_type} expired on ${longDate(d.expiry_date)}, so we can't book you for ${C[temp.client_id].name} until we have the renewal. Upload it here:`,\n  }[state];\n  messages.push({ channel: 'SMS', to_name: fullName(temp), to_address: temp.phone, subject: '', body, link, related: `${d.doc_id} ${d.doc_type}`, workflow: 'Document check' });\n  docUpdates.push({ id: d.id, last_reminder_at: nowIso(), reminders_sent: Number(d.reminders_sent || 0) + 1 });\n}\n\n// Compliance status per temp, written back so the booking team sees it.\nconst tempUpdates = temps.map((t) => {\n  const states = docs.filter((d) => d.temp_id === t.temp_id).map(stateOf);\n  const rtwMissing = docs.some((d) => d.temp_id === t.temp_id && d.doc_type === 'Right to work' && d.status === 'missing');\n  const status = states.includes('expired') || rtwMissing ? 'Blocked' : states.some((s) => s !== 'verified') ? 'Action needed' : 'Compliant';\n  return { id: t.id, compliance_status: status, compliance_checked_at: nowIso() };\n});\n\nif (blocked.length || actions.length || toVerify.length) {\n  messages.push({\n    channel: 'Email', to_name: config.consultant_name, to_address: config.consultant_email,\n    subject: `Compliance check: ${blocked.length} do-not-book, ${actions.length} action needed, ${toVerify.length} to verify`,\n    body: [\n      blocked.length ? `DO NOT BOOK: ${blocked.join('; ')}.` : '',\n      actions.length ? `Chasing: ${actions.join('; ')}.` : '',\n      toVerify.length ? `Uploaded, please verify: ${toVerify.join('; ')}.` : '',\n    ].filter(Boolean).join(' '),\n    link: `${base}/webhook/console`, related: 'Daily document check', workflow: 'Document check',\n  });\n}\n\nreturn [{ json: { docUpdates, tempUpdates, messages, summary: `Document check done: ${blocked.length} blocked, ${actions.length} chased${skipped ? ` (${skipped} already reminded today)` : ''}, ${toVerify.length} waiting for verification.` } }];\n"
+      },
+      "id": "e2f796e8-0315-4c70-a879-c79374127840"
+    },
+    {
+      "name": "Reminder log",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        60
+      ],
+      "parameters": {
+        "fieldToSplitOut": "docUpdates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "afad40ed-e4b2-454b-a34c-6776c6e7b66b"
+    },
+    {
+      "name": "Update documents",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        60
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Documents"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "68280323-205e-4bc1-ae84-adb4e4652173"
+    },
+    {
+      "name": "Compliance status",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        200
+      ],
+      "parameters": {
+        "fieldToSplitOut": "tempUpdates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "ccb8b032-4d9e-4847-a375-3285c7623d62"
+    },
+    {
+      "name": "Update temps",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        200
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Temps"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "4ecfc756-e351-48a6-a7e1-053c8851e0cd"
+    },
+    {
+      "name": "Requests and alerts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        340
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "d7eb8d85-f057-4ed3-a346-f12bae6451d0"
+    },
+    {
+      "name": "Send requests and alerts",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        340
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfSendMessage01"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "10f76b2c-f375-4fdb-a315-7e45aee4c053"
+    },
+    {
+      "name": "Check result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        480
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// Hand the automation's summary back to the console.\nlet summary = $input.first().json.summary;\nreturn [{ json: { summary: summary || 'Done.' } }];"
+      },
+      "id": "55b838e3-e974-42bd-a5b6-ae7bbfaa2f8e"
+    },
+    {
+      "name": "Lane: form",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        660
+      ],
+      "parameters": {
+        "content": "### Temp opens the upload link\nPhoto or PDF, from their phone.",
+        "width": 920,
+        "height": 220,
+        "color": 7
+      },
+      "id": "97c7f3ae-1cf6-454e-a18f-a9e53f1d8495"
+    },
+    {
+      "name": "Temp opens upload link",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        740
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "documents/upload",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "564a7529-007f-4215-a9d8-7eee86a8c70d",
+      "id": "9aa935ff-f9e3-45b9-a4b0-87dfeabe6fb6"
+    },
+    {
+      "name": "Load data (form)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        740
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "440e525b-04bf-4be6-a9eb-02ad982f2077"
+    },
+    {
+      "name": "Render upload page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        740
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// GET /webhook/documents/upload?t=TOKEN: the temp uploads a document from their phone.\nconst config = configFrom('Config');\nconst token = String($('Temp opens upload link').first().json.query?.t || '');\nconst doc = tableRows('Documents').find((d) => token && d.upload_token === token);\nconst agency = config.agency_name;\nif (!doc) {\n  return [{ json: { html: page('Link not found', agency, `<h1>This upload link has expired</h1><p class=\"muted\">Please contact ${esc(agency)}.</p>`) } }];\n}\nconst temp = tableRows('Temps').find((t) => t.temp_id === doc.temp_id);\nif (doc.status === 'received') {\n  return [{ json: { html: page('Received', agency, `<h1>Thanks, ${esc(temp.first_name)}</h1><div class=\"ok\">We have your ${esc(doc.doc_type)}. Our team is checking it.</div>`) } }];\n}\nconst needsExpiry = doc.doc_type !== 'Right to work' || doc.expiry_date;\nconst body = `<h1>Upload your ${esc(doc.doc_type)}</h1>\n<p>Hi ${esc(temp.first_name)}, take a clear photo or upload a PDF. It goes straight to ${esc(agency)}'s compliance team.</p>\n<form method=\"post\" action=\"${config.base_url}/webhook/documents/upload\" enctype=\"multipart/form-data\">\n<input type=\"hidden\" name=\"t\" value=\"${esc(token)}\">\n<label for=\"file\">Document (photo or PDF, max 10 MB)</label><input id=\"file\" name=\"file\" type=\"file\" accept=\"image/*,application/pdf\" required>\n${needsExpiry ? '<label for=\"expiry\">Expiry date (if it has one)</label><input id=\"expiry\" name=\"expiry\" type=\"date\">' : ''}\n<button class=\"btn\" type=\"submit\">Upload securely</button></form>\n<p class=\"muted\">For right to work, we may also ask for a share code check. Only ${esc(agency)} can see your document.</p>`;\nreturn [{ json: { html: page(`Upload ${doc.doc_type}`, agency, body) } }];\n"
+      },
+      "id": "90fab26b-515b-4036-a69e-66d658f35c06"
+    },
+    {
+      "name": "Show upload page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        740
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "34ba6507-8409-41ec-a118-03dde2e70b0d"
+    },
+    {
+      "name": "Lane: upload",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        920
+      ],
+      "parameters": {
+        "content": "### Temp uploads a document\nStored under files/documents, marked \"check needed\", consultant asked to verify.",
+        "width": 1520,
+        "height": 500,
+        "color": 7
+      },
+      "id": "c8533acf-21b2-4d15-a098-63efdba86ab3"
+    },
+    {
+      "name": "Temp uploads document",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1000
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "documents/upload",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "595b978e-f8d4-4529-a699-31e84f8ab352",
+      "id": "e52df5d8-eee1-4c3b-a13a-7b1f489d8ee5"
+    },
+    {
+      "name": "Load data (upload)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        1000
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "8846f11b-6d6f-411b-aaf7-68fbcca50157"
+    },
+    {
+      "name": "Save upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1000
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// POST /webhook/documents/upload (multipart): store the file and mark the document \"received\".\n// Returns { updates, messages, html, savePath } and passes the uploaded file on as binary \"data\".\nconst config = configFrom('Config');\nconst hook = $('Temp uploads document').first();\nconst form = hook.json.body || {};\nconst token = String(form.t || '');\nconst doc = tableRows('Documents').find((d) => token && d.upload_token === token);\nconst agency = config.agency_name;\nconst bin = hook.binary || {};\nconst fileKey = Object.keys(bin)[0];\nconst file = fileKey ? bin[fileKey] : null;\nconst fail = (title, msg) => [{ json: { updates: [], messages: [], savePath: '', html: page(title, agency, `<h1>${esc(title)}</h1><div class=\"warn\">${esc(msg)}</div>`) } }];\n\nif (!doc) return fail('Upload link not valid', `Please contact ${agency} for a new link.`);\nif (!file) return fail('No file received', 'Please choose a photo or PDF and try again.');\nconst allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/webp'];\nif (!allowed.includes(file.mimeType)) return fail('File type not accepted', 'Please upload a photo (JPG or PNG) or a PDF.');\n\nconst temp = tableRows('Temps').find((t) => t.temp_id === doc.temp_id);\nconst ext = (file.fileName || '').split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '') || (file.mimeType === 'application/pdf' ? 'pdf' : 'jpg');\nconst storedName = `${doc.doc_id}-${doc.doc_type.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}.${ext}`;\nconst expiry = /^\\d{4}-\\d{2}-\\d{2}$/.test(String(form.expiry || '')) ? form.expiry : doc.expiry_date || '';\nconst updates = [{ id: doc.id, status: 'received', file_name: storedName, original_name: String(file.fileName || '').slice(0, 120), expiry_date: expiry, received_at: nowIso() }];\nconst messages = [{\n  channel: 'Email', to_name: config.consultant_name, to_address: config.consultant_email,\n  subject: `Please verify: ${fullName(temp)} uploaded ${doc.doc_type}`,\n  body: `${fullName(temp)} uploaded their ${doc.doc_type}${expiry ? ' (expires ' + expiry + ')' : ''}. Check it against the original and mark it verified.`,\n  link: `${config.base_url}/webhook/console`, related: doc.doc_id, workflow: 'Document upload',\n}];\nconst html = page('Uploaded', agency, `<h1>Thanks, ${esc(temp.first_name)}</h1><div class=\"ok\">Your ${esc(doc.doc_type)} has been uploaded securely.</div><p class=\"muted\">Our compliance team will check it. We'll text you if we need anything else.</p>`);\nreturn [{ json: { updates, messages, html, savePath: `documents/${storedName}` }, binary: { data: file } }];\n"
+      },
+      "id": "7cc13a02-c2fc-4c3a-a967-a33ff6db932e"
+    },
+    {
+      "name": "File accepted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        1000
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "20d66a90-545a-41b7-ae30-6e1b9a469e68",
+              "leftValue": "={{ String($json.savePath ?? '') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "39cf6a8b-138f-416c-a512-7bfeb53565e2"
+    },
+    {
+      "name": "Store document",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        800,
+        1000
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "=D:/Software Development/automations/n8n/files/{{ $json.savePath }}",
+        "dataPropertyName": "data",
+        "options": {}
+      },
+      "id": "4ec00c72-f4d0-40f2-a5cf-071decce6267"
+    },
+    {
+      "name": "Received",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        1000
+      ],
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "7b74cfb0-2203-463a-adfa-a262de24ece2"
+    },
+    {
+      "name": "Mark received",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        1000
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Documents"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "908c6e68-9a80-482e-aee9-429ca8a6e5d0"
+    },
+    {
+      "name": "Verify request",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        1140
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "812eafdf-4315-4307-a1f8-3cc7e472590f"
+    },
+    {
+      "name": "Ask consultant to verify",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        1140
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfSendMessage01"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "30fd4483-6ba8-4c1f-a671-0eb19d61d406"
+    },
+    {
+      "name": "Show upload result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        1280
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f4f3b870-94ab-4187-afa9-7837bff9c6a5"
+    },
+    {
+      "name": "Lane: verify",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        1460
+      ],
+      "parameters": {
+        "content": "### Consultant marks a document verified (console button)\nBack to the console afterwards.",
+        "width": 1120,
+        "height": 360,
+        "color": 7
+      },
+      "id": "b29e29ad-21cf-4e30-adc7-4d0503510c18"
+    },
+    {
+      "name": "Consultant verifies",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1540
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "documents/verify",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "e84f52e7-735b-49b2-acff-5d9d7cef13c9",
+      "id": "8d9cb004-067e-48f1-af41-f4e26fc5b979"
+    },
+    {
+      "name": "Load data (verify)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        1540
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "dad678ab-157e-4741-aa5c-6ad631e3a57d"
+    },
+    {
+      "name": "Verify document",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1540
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n\n// GET /webhook/documents/verify?id=D00x: consultant marks an uploaded document as verified.\nconst config = configFrom('Config');\nconst id = String($('Consultant verifies').first().json.query?.id || '');\nconst doc = tableRows('Documents').find((d) => d.doc_id === id);\nconst temp = doc && tableRows('Temps').find((t) => t.temp_id === doc.temp_id);\nconst ok = doc && doc.status === 'received';\nconst notice = ok ? `Verified ${fullName(temp)}'s ${doc.doc_type}.` : 'Nothing to verify for that document.';\nreturn [{ json: {\n  updates: ok ? [{ id: doc.id, status: 'verified', verified_at: nowIso(), verified_by: config.consultant_name }] : [],\n  location: `${config.base_url}/webhook/console?done=${encodeURIComponent(notice)}`,\n} }];\n"
+      },
+      "id": "4e680582-f8fe-4c5a-aa31-91e3101c0c95"
+    },
+    {
+      "name": "Verified",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        1540
+      ],
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "a8c3c489-ac42-4ac5-a109-b34773b895d0"
+    },
+    {
+      "name": "Mark verified",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        1540
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Documents"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "866152b5-d498-49f5-ade1-645c20e471c1"
+    },
+    {
+      "name": "Back to console",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        1680
+      ],
+      "parameters": {
+        "respondWith": "redirect",
+        "redirectURL": "={{ $json.location }}",
+        "options": {
+          "responseCode": 303
+        }
+      },
+      "id": "702c7235-dce7-4ca4-a30d-4aac88965df5"
+    },
+    {
+      "name": "Lane: view",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        1860
+      ],
+      "parameters": {
+        "content": "### Consultant views an uploaded file\nOpens the stored photo or PDF.",
+        "width": 1320,
+        "height": 360,
+        "color": 7
+      },
+      "id": "476366e3-5a7c-47f1-a53c-3db02f023dd4"
+    },
+    {
+      "name": "View uploaded file",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1940
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "documents/file",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "97f2ea1c-dfa1-4270-ae84-bfb43e23807c",
+      "id": "1a51db99-5dd3-4dfa-a918-acfeddec1edf"
+    },
+    {
+      "name": "Load data (view)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        1940
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "42ef698c-088b-459c-a636-b38584db92e6"
+    },
+    {
+      "name": "Locate file",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1940
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n\n// GET /webhook/documents/file?id=D00x: view an uploaded document (consultant only, from the console).\nconst id = String($('View uploaded file').first().json.query?.id || '');\nconst doc = tableRows('Documents').find((d) => d.doc_id === id);\nconst ok = !!(doc && doc.file_name && /^[A-Za-z0-9._-]+$/.test(doc.file_name));\nconst html = ok ? '' : page('Not found', configFrom().agency_name, '<h1>No file on record</h1><p class=\"muted\">This document has not been uploaded yet.</p>');\nreturn [{ json: { ok, filePath: ok ? 'documents/' + doc.file_name : '', fileName: ok ? doc.file_name : '', html } }];\n"
+      },
+      "id": "b1ba6a86-71c9-4d48-a494-96d05d44e871"
+    },
+    {
+      "name": "File on record?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        1940
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "35693f7e-823e-47f3-a5f8-b7bdd277e0ce",
+              "leftValue": "={{ String($json.ok ?? '') }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "50ba73ca-3406-4bdc-a830-f86fb2fec203"
+    },
+    {
+      "name": "Read document",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        800,
+        1940
+      ],
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "=D:/Software Development/automations/n8n/files/{{ $json.filePath }}",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "id": "259115fa-d9a8-4a6b-a4f5-a4b032485065"
+    },
+    {
+      "name": "Show file",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        1940
+      ],
+      "parameters": {
+        "respondWith": "binary",
+        "responseDataSource": "automatically",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Disposition",
+                "value": "=inline; filename=\"{{ $json.fileName.split('/').pop() }}\""
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "2c3e1d08-acd2-4474-ac9f-ac94b3b26ea9"
+    },
+    {
+      "name": "No file page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        2080
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "9a944323-cc5c-42ee-ab7b-78e7a02fe53f"
+    }
+  ],
+  "connections": {
+    "Every day 08:00": {
+      "main": [
+        [
+          {
+            "node": "Load data (check)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (check)": {
+      "main": [
+        [
+          {
+            "node": "Plan document check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run from console": {
+      "main": [
+        [
+          {
+            "node": "Load data (check)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan document check": {
+      "main": [
+        [
+          {
+            "node": "Reminder log",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Compliance status",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Requests and alerts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder log": {
+      "main": [
+        [
+          {
+            "node": "Update documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compliance status": {
+      "main": [
+        [
+          {
+            "node": "Update temps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requests and alerts": {
+      "main": [
+        [
+          {
+            "node": "Send requests and alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Temp opens upload link": {
+      "main": [
+        [
+          {
+            "node": "Load data (form)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (form)": {
+      "main": [
+        [
+          {
+            "node": "Render upload page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render upload page": {
+      "main": [
+        [
+          {
+            "node": "Show upload page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Temp uploads document": {
+      "main": [
+        [
+          {
+            "node": "Load data (upload)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (upload)": {
+      "main": [
+        [
+          {
+            "node": "Save upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save upload": {
+      "main": [
+        [
+          {
+            "node": "File accepted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File accepted?": {
+      "main": [
+        [
+          {
+            "node": "Store document",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show upload result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store document": {
+      "main": [
+        [
+          {
+            "node": "Received",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Verify request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Show upload result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Received": {
+      "main": [
+        [
+          {
+            "node": "Mark received",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify request": {
+      "main": [
+        [
+          {
+            "node": "Ask consultant to verify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultant verifies": {
+      "main": [
+        [
+          {
+            "node": "Load data (verify)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (verify)": {
+      "main": [
+        [
+          {
+            "node": "Verify document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify document": {
+      "main": [
+        [
+          {
+            "node": "Verified",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Back to console",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verified": {
+      "main": [
+        [
+          {
+            "node": "Mark verified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "View uploaded file": {
+      "main": [
+        [
+          {
+            "node": "Load data (view)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (view)": {
+      "main": [
+        [
+          {
+            "node": "Locate file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Locate file": {
+      "main": [
+        [
+          {
+            "node": "File on record?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File on record?": {
+      "main": [
+        [
+          {
+            "node": "Read document",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No file page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read document": {
+      "main": [
+        [
+          {
+            "node": "Show file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/London",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Requests missing documents, warns 30 days before expiry, blocks expired documents and collects uploads for verification."
+  },
+  "tags": []
+}

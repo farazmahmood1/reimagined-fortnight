@@ -1,0 +1,908 @@
+{
+  "id": "frfUmbrella00001",
+  "name": "3 · Umbrella evidence: monthly request → payslip checks",
+  "nodes": [
+    {
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        -200
+      ],
+      "parameters": {
+        "content": "## 3 · Umbrella evidence: monthly request → payslip checks\nJoint and several liability (from 6 April 2026): agencies need documented checks, ongoing monitoring and records.\nChecks: R1 hours = approved · R2 income = hours × assignment rate · R3 taxable pay ≥ National Living Wage · R4 non-taxable payments. Flags are for human review, not decisions.",
+        "width": 1700,
+        "height": 140,
+        "color": 5
+      },
+      "id": "1d075e52-97c8-4889-af98-264f54e32541"
+    },
+    {
+      "name": "Lane: request",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        -20
+      ],
+      "parameters": {
+        "content": "### 1st of the month 09:00 (or from the console): evidence request\nSecure upload link to each umbrella paying our temps; a reminder if nothing has arrived.",
+        "width": 1320,
+        "height": 640,
+        "color": 7
+      },
+      "id": "880ad5be-d251-4a05-aafe-4b724e65e87c"
+    },
+    {
+      "name": "1st of month 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        60
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "monthsInterval": 1,
+              "triggerAtDayOfMonth": 1,
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "405ad84c-72ec-4c04-a1c9-dc0b1282a5d5"
+    },
+    {
+      "name": "Run from console",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "b75ed94f-9f95-473a-a85c-1eddf3ae4b59"
+    },
+    {
+      "name": "Load data (request)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        60
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a10e2f8a-991a-4dfa-ac39-5f12f021eb15"
+    },
+    {
+      "name": "Plan requests",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        60
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// Monthly umbrella evidence request (joint and several liability since 6 April 2026).\n// For each umbrella company paying our temps: open an evidence record for the period and send a\n// secure upload link; if one is already open and not received, send a reminder.\n// Returns { inserts, updates, messages, summary }.\nconst config = configFrom('Config');\nconst period = config.evidence_period;\nconst base = config.base_url;\nconst temps = tableRows('Temps');\nconst evidence = tableRows('Evidence');\nconst periodLabel = new Date(`${period}-01`).toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long', year: 'numeric' });\n\nconst inserts = [];\nconst updates = [];\nconst messages = [];\nfor (const u of tableRows('Umbrellas')) {\n  const workers = temps.filter((t) => t.pay_route === u.umbrella_id);\n  if (!workers.length) continue;\n  const existing = evidence.find((e) => e.umbrella_id === u.umbrella_id && e.period === period);\n  if (existing && existing.status !== 'requested') continue;\n  const token = existing ? existing.upload_token : newToken();\n  const evidenceId = existing ? existing.evidence_id : `EV-${period}-${u.umbrella_id}`;\n  const reminders = existing ? Number(existing.reminders_sent || 0) + 1 : 0;\n  if (existing) updates.push({ id: existing.id, reminders_sent: reminders, last_reminder_at: nowIso() });\n  else inserts.push({ evidence_id: evidenceId, umbrella_id: u.umbrella_id, period, status: 'requested', upload_token: token, requested_at: nowIso(), reminders_sent: 0 });\n  messages.push({\n    channel: 'Email', to_name: `${u.name} (${u.contact_name})`, to_address: u.contact_email,\n    subject: `${existing ? 'Reminder: ' : ''}${config.agency_name}: payslip evidence for ${periodLabel} (${workers.length} worker${workers.length > 1 ? 's' : ''})`,\n    body: `Please upload the ${periodLabel} payslip summary for ${workers.map(fullName).join(', ')}: one row per worker with hours, assignment income, gross taxable pay, non-taxable payments and net pay. CSV template on the upload page.`,\n    link: `${base}/webhook/umbrella/evidence?t=${token}`, related: evidenceId, workflow: 'Umbrella evidence request',\n  });\n}\nreturn [{ json: { inserts, updates, messages, summary: messages.length ? `Requested ${periodLabel} evidence from ${messages.length} umbrella compan${messages.length > 1 ? 'ies' : 'y'}.` : 'All umbrella evidence for this period is already in.' } }];\n"
+      },
+      "id": "736a5345-9329-439c-a9f8-c500cd8a3faa"
+    },
+    {
+      "name": "New requests",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        60
+      ],
+      "parameters": {
+        "fieldToSplitOut": "inserts",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "79a8118a-b5da-46f8-a09b-9e652fbf60d6"
+    },
+    {
+      "name": "Open evidence request",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        60
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Evidence"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "76142f30-23ca-499c-afd7-3df744a281fd"
+    },
+    {
+      "name": "Reminders",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        200
+      ],
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "174789d8-fbe4-4594-a6a7-bb149e74f7fd"
+    },
+    {
+      "name": "Count reminder",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        200
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Evidence"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "9b21eb48-900e-4ae2-a999-879093116f1a"
+    },
+    {
+      "name": "Request emails",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        340
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "158b72d8-3cbf-4b1e-aad1-c6f9264a7eb9"
+    },
+    {
+      "name": "Email umbrella companies",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        340
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfSendMessage01"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "84cbcb1d-7f78-4b9b-ad69-562ebb46708a"
+    },
+    {
+      "name": "Request result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        480
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// Hand the automation's summary back to the console.\nlet summary = $input.first().json.summary;\nreturn [{ json: { summary: summary || 'Done.' } }];"
+      },
+      "id": "7f7c44b6-a57e-46f7-afe7-00ed06e6a92e"
+    },
+    {
+      "name": "Lane: form",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        660
+      ],
+      "parameters": {
+        "content": "### Umbrella company opens the upload link\nShows the workers and the CSV columns expected.",
+        "width": 920,
+        "height": 220,
+        "color": 7
+      },
+      "id": "a5301549-1b0d-4cf2-a57f-04cdb8edf512"
+    },
+    {
+      "name": "Umbrella opens link",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        740
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "umbrella/evidence",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "f566842a-993a-48f3-a6a9-9866ad2e92cb",
+      "id": "f4df3478-8d4b-40ac-a485-5d18631a1f13"
+    },
+    {
+      "name": "Load data (form)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        740
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "78856f10-d9b0-4c76-a898-f980246f68b6"
+    },
+    {
+      "name": "Render evidence page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        740
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// GET /webhook/umbrella/evidence?t=TOKEN: upload page for the umbrella company.\nconst config = configFrom('Config');\nconst token = String($('Umbrella opens link').first().json.query?.t || '');\nconst ev = tableRows('Evidence').find((e) => token && e.upload_token === token);\nconst agency = config.agency_name;\nif (!ev) {\n  return [{ json: { html: page('Link not found', agency, `<h1>This evidence link is not valid</h1><p class=\"muted\">Please contact ${esc(config.compliance_email)}.</p>`) } }];\n}\nconst umbrella = tableRows('Umbrellas').find((u) => u.umbrella_id === ev.umbrella_id);\nconst workers = tableRows('Temps').filter((t) => t.pay_route === ev.umbrella_id);\nif (ev.status !== 'requested') {\n  return [{ json: { html: page('Received', agency, `<h1>Thank you</h1><div class=\"ok\">We received ${esc(ev.period)} evidence from ${esc(umbrella.name)}.</div>`) } }];\n}\nconst template = 'temp_id,worker_name,period,hours,assignment_income,gross_taxable_pay,non_taxable_payments,net_pay';\nconst body = `<h1>Payslip evidence: ${esc(ev.period)}</h1>\n<p>${esc(umbrella.name)}, please upload a CSV with one row per worker. ${esc(agency)} checks it against approved hours and the assignment rates we paid you.</p>\n<table><tr><th>Worker ID</th><th>Worker</th></tr>${workers.map((w) => `<tr><td>${esc(w.temp_id)}</td><td>${esc(fullName(w))}</td></tr>`).join('')}</table>\n<label>CSV columns</label><p class=\"muted\" style=\"font-family:Consolas,monospace;font-size:12px\">${template}</p>\n<form method=\"post\" action=\"${config.base_url}/webhook/umbrella/evidence\" enctype=\"multipart/form-data\">\n<input type=\"hidden\" name=\"t\" value=\"${esc(token)}\">\n<label for=\"file\">Payslip summary (CSV)</label><input id=\"file\" name=\"file\" type=\"file\" accept=\".csv,text/csv\" required>\n<button class=\"btn\" type=\"submit\">Upload evidence</button></form>`;\nreturn [{ json: { html: page('Umbrella evidence', agency, body) } }];\n"
+      },
+      "id": "80e9570d-1a8e-4ee5-aaa3-9e7b11d68de0"
+    },
+    {
+      "name": "Show evidence page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        740
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "92ff54dd-9078-430d-abd7-e48a19bb7aec"
+    },
+    {
+      "name": "Lane: check",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        920
+      ],
+      "parameters": {
+        "content": "### Umbrella uploads payslip CSV → checks\nEvery line checked and recorded (audit trail); compliance gets one email with any flags.",
+        "width": 1720,
+        "height": 640,
+        "color": 7
+      },
+      "id": "c484b27e-2c0e-444b-a08c-8870f37a1fac"
+    },
+    {
+      "name": "Umbrella uploads evidence",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1000
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "umbrella/evidence",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "bf47b472-4abb-461c-a556-a8a6e1ee6aee",
+      "id": "56a4a055-7b3f-4600-a497-d0a193bf1236"
+    },
+    {
+      "name": "Read CSV",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        200,
+        1000
+      ],
+      "parameters": {
+        "operation": "csv",
+        "binaryPropertyName": "file",
+        "options": {}
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "id": "a2dbe164-2758-408a-adbb-a3d10672060e"
+    },
+    {
+      "name": "Load data (check)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        1000
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfLoadData00001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "1e44b90c-787f-4f76-a5bd-3fd647d4692a"
+    },
+    {
+      "name": "Check payslips",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        1000
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst money = (n) => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst round2 = (n) => Math.round(Number(n || 0) * 100) / 100;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\nconst nowIso = () => new Date().toISOString();\nconst fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '');\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst fullName = (t) => (t ? `${t.first_name} ${t.last_name}` : '');\n\n// A clean, mobile-friendly page for temps, clients and umbrella companies.\nconst page = (title, agency, body) => `<!doctype html><html lang=\"en-GB\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>\n<style>\n*{box-sizing:border-box}body{margin:0;font:15px/1.5 \"Segoe UI\",system-ui,-apple-system,sans-serif;color:#14213d;background:#f6f8fb}\n.top{background:#14213d;color:#fff;padding:14px 20px;font-weight:600}.top span{color:#cbd5e1;font-weight:400;font-size:13px;margin-left:8px}\n.card{max-width:560px;margin:22px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:22px}\nh1{font-size:20px;margin:0 0 6px}p{margin:6px 0 14px}.muted{color:#64748b;font-size:13px}\nlabel{display:block;font-weight:600;font-size:13px;margin:12px 0 4px}input,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}\n.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.days label{font-size:12px;text-align:center;margin:0 0 4px}.days input{text-align:center;padding:8px 4px}\n.btn{display:inline-block;background:#2952cc;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;margin-top:16px}\n.btn.alt{background:#fff;color:#14213d;border:1px solid #cbd5e1;margin-left:8px}\n.ok{background:#e3f5ec;color:#0f8a5f;border-radius:8px;padding:12px 14px;font-weight:600}.warn{background:#fdf3e1;color:#8a5a12;border-radius:8px;padding:12px 14px}\ntable{width:100%;border-collapse:collapse;margin-top:8px}td,th{padding:7px 4px;border-bottom:1px solid #e2e8f0;text-align:left;font-size:14px}.num{text-align:right}\n.foot{text-align:center;color:#94a3b8;font-size:12px;margin:10px 0 30px}\n</style></head><body><div class=\"top\">${esc(agency)}<span>Secure link</span></div><div class=\"card\">${body}</div><div class=\"foot\">Demo by Forrof · fictional data</div></body></html>`;\n\n\n// POST /webhook/umbrella/evidence: check each payslip line against what the agency knows.\n// Rules (flags are for human review, not compliance decisions):\n//  R1 hours on the payslip match approved timesheet hours for the period\n//  R2 assignment income matches approved hours x the assignment rate the agency paid (within £1)\n//  R3 taxable gross pay per hour is at least the National Living Wage\n//  R4 any non-taxable payment is flagged for review\n// Returns { evidenceUpdates, checkInserts, messages, html }.\nconst config = configFrom('Config');\nconst form = $('Umbrella uploads evidence').first().json.body || {};\nconst token = String(form.t || '');\nconst ev = tableRows('Evidence').find((e) => token && e.upload_token === token);\nconst agency = config.agency_name;\nconst fail = (title, msg) => [{ json: { evidenceUpdates: [], checkInserts: [], messages: [], html: page(title, agency, `<h1>${esc(title)}</h1><div class=\"warn\">${esc(msg)}</div>`) } }];\nif (!ev) return fail('Link not valid', `Please contact ${config.compliance_email}.`);\nif (ev.status !== 'requested') return fail('Already received', 'Evidence for this period has already been uploaded.');\n\nconst umbrella = tableRows('Umbrellas').find((u) => u.umbrella_id === ev.umbrella_id);\nconst T = Object.fromEntries(tableRows('Temps').map((t) => [t.temp_id, t]));\nconst nlw = Number(config.national_living_wage);\nconst sheets = tableRows('Timesheets').filter((t) => String(t.week_ending).slice(0, 7) === ev.period && ['approved', 'exported'].includes(t.status));\nconst lines = $('Read CSV').all().map((i) => i.json).filter((r) => r.temp_id);\nif (!lines.length) return fail('Could not read the file', 'Please upload the CSV with the column headings shown on the previous page.');\n\nconst checkInserts = [];\nfor (const line of lines) {\n  const temp = T[String(line.temp_id).trim()];\n  const hours = Number(line.hours);\n  const income = Number(line.assignment_income);\n  const gross = Number(line.gross_taxable_pay);\n  const nonTax = Number(line.non_taxable_payments || 0);\n  const reasons = [];\n  let approvedHours = 0;\n  let expected = 0;\n  if (!temp || temp.pay_route !== ev.umbrella_id) {\n    reasons.push('Worker is not on assignment through this umbrella');\n  } else {\n    approvedHours = round2(sheets.filter((s) => s.temp_id === temp.temp_id).reduce((s, t) => s + Number(t.hours), 0));\n    expected = round2(approvedHours * temp.pay_rate);\n    if (Math.abs(hours - approvedHours) > 0.01) reasons.push(`Hours ${hours} vs ${approvedHours} approved`);\n    if (Math.abs(income - expected) > 1) reasons.push(`Assignment income ${money(income)} vs ${money(expected)} paid by us (${income < expected ? '-' : '+'}${money(Math.abs(income - expected))})`);\n  }\n  const perHour = hours > 0 ? round2(gross / hours) : 0;\n  if (hours > 0 && perHour < nlw) reasons.push(`Taxable pay ${money(perHour)}/hr is below the ${money(nlw)} National Living Wage`);\n  if (nonTax > 0) reasons.push(`Non-taxable payment of ${money(nonTax)}: ask what it is`);\n  checkInserts.push({\n    evidence_id: ev.evidence_id, umbrella_id: ev.umbrella_id, period: ev.period, temp_id: String(line.temp_id).trim(),\n    worker_name: temp ? fullName(temp) : String(line.worker_name || line.temp_id), hours, approved_hours: approvedHours,\n    expected_income: expected, assignment_income: round2(income), gross_taxable_pay: round2(gross), gross_per_hour: perHour,\n    non_taxable_payments: round2(nonTax), result: reasons.length ? 'Flag' : 'OK', reasons: reasons.join('; '), checked_at: nowIso(),\n  });\n}\n\nconst flags = checkInserts.filter((c) => c.result === 'Flag');\nconst status = flags.length ? 'flagged' : 'ok';\nconst evidenceUpdates = [{ id: ev.id, status, received_at: nowIso(), file_name: `${ev.evidence_id}.csv`, lines: checkInserts.length, flags: flags.length }];\nconst messages = [{\n  channel: 'Email', to_name: 'Compliance', to_address: config.compliance_email,\n  subject: flags.length ? `Review needed: ${flags.length} payslip flag${flags.length > 1 ? 's' : ''} from ${umbrella.name} (${ev.period})` : `${umbrella.name} ${ev.period}: all ${checkInserts.length} payslips match`,\n  body: flags.length ? flags.map((f) => `${f.worker_name}: ${f.reasons}`).join(' | ') + '. Flags are prompts for review, not findings.' : 'Hours, assignment income, NLW and non-taxable checks all passed. Evidence filed for audit.',\n  link: `${config.base_url}/webhook/console`, related: ev.evidence_id, workflow: 'Umbrella evidence check',\n}];\nconst html = page('Evidence received', agency, `<h1>Thank you, ${esc(umbrella.name)}</h1><div class=\"ok\">We received ${checkInserts.length} payslip line${checkInserts.length > 1 ? 's' : ''} for ${esc(ev.period)}.</div><p class=\"muted\">${esc(agency)}'s compliance team will contact you if anything needs clarifying.</p>`);\n// Keep the umbrella's original file for the audit trail.\nconst original = $('Umbrella uploads evidence').first().binary?.file;\nreturn [{\n  json: { evidenceUpdates, checkInserts, messages, html, savePath: original ? `umbrella-evidence/${ev.evidence_id}-${Date.now()}.csv` : '' },\n  ...(original ? { binary: { data: original } } : {}),\n}];\n"
+      },
+      "id": "8c38e6c7-fa03-48e9-a051-1dbd139d708c"
+    },
+    {
+      "name": "Keep original file?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        1000
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b78b2108-9710-4d3f-af89-3143f2da786c",
+              "leftValue": "={{ String($json.savePath ?? '') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "eb27173e-6fec-4c52-a938-3492b7bc7826"
+    },
+    {
+      "name": "Store evidence file",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        1000
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "=D:/Software Development/automations/n8n/files/{{ $json.savePath }}",
+        "dataPropertyName": "data",
+        "options": {}
+      },
+      "id": "56e3740a-ba79-4579-ab97-65b44ab751cd"
+    },
+    {
+      "name": "Evidence status",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        1000
+      ],
+      "parameters": {
+        "fieldToSplitOut": "evidenceUpdates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "04d81e7b-8d9c-4775-abd9-a2d6ef52f9dd"
+    },
+    {
+      "name": "Update evidence",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1400,
+        1000
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Evidence"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "dad7f19f-a663-4b29-aca4-33426a55de33"
+    },
+    {
+      "name": "Payslip results",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        1140
+      ],
+      "parameters": {
+        "fieldToSplitOut": "checkInserts",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "254206dd-b668-4cf0-a1d3-025108a73660"
+    },
+    {
+      "name": "Record payslip checks",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1400,
+        1140
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Payslip checks"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f88209d4-3a26-4b20-ad97-1cd6f685ac7c"
+    },
+    {
+      "name": "Compliance email",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        1280
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "ea3f7dba-de0c-4020-ac73-a462f155451d"
+    },
+    {
+      "name": "Email compliance",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1400,
+        1280
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "frfSendMessage01"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "09c49612-3381-4240-a353-3e4846fc9283"
+    },
+    {
+      "name": "Show receipt",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        1420
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "492b06bd-b650-4a2a-aef8-49f1cb0cb1e3"
+    }
+  ],
+  "connections": {
+    "1st of month 09:00": {
+      "main": [
+        [
+          {
+            "node": "Load data (request)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (request)": {
+      "main": [
+        [
+          {
+            "node": "Plan requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run from console": {
+      "main": [
+        [
+          {
+            "node": "Load data (request)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan requests": {
+      "main": [
+        [
+          {
+            "node": "New requests",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reminders",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Request emails",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Request result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New requests": {
+      "main": [
+        [
+          {
+            "node": "Open evidence request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminders": {
+      "main": [
+        [
+          {
+            "node": "Count reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request emails": {
+      "main": [
+        [
+          {
+            "node": "Email umbrella companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Umbrella opens link": {
+      "main": [
+        [
+          {
+            "node": "Load data (form)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (form)": {
+      "main": [
+        [
+          {
+            "node": "Render evidence page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render evidence page": {
+      "main": [
+        [
+          {
+            "node": "Show evidence page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Umbrella uploads evidence": {
+      "main": [
+        [
+          {
+            "node": "Read CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read CSV": {
+      "main": [
+        [
+          {
+            "node": "Load data (check)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (check)": {
+      "main": [
+        [
+          {
+            "node": "Check payslips",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check payslips": {
+      "main": [
+        [
+          {
+            "node": "Keep original file?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep original file?": {
+      "main": [
+        [
+          {
+            "node": "Store evidence file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store evidence file": {
+      "main": [
+        [
+          {
+            "node": "Evidence status",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Payslip results",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Compliance email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Show receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evidence status": {
+      "main": [
+        [
+          {
+            "node": "Update evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payslip results": {
+      "main": [
+        [
+          {
+            "node": "Record payslip checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compliance email": {
+      "main": [
+        [
+          {
+            "node": "Email compliance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/London",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Requests monthly payslip evidence from each umbrella company and checks it against approved hours, assignment rates, the National Living Wage and non-taxable payments."
+  },
+  "tags": []
+}
