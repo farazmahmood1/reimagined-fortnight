@@ -1,0 +1,18 @@
+{
+  "name": "forrof-agri-nz-automations",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Forrof demo: a farm admin agent with guardrails for New Zealand agribusiness, running on a local n8n (uses the n8n installed one folder up).",
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "setup": "node scripts/setup.mjs",
+    "update": "node scripts/update.mjs",
+    "reset-demo": "node scripts/setup.mjs --reset",
+    "test-rules": "node scripts/test-rules.mjs",
+    "test-flows": "node scripts/test-flows.mjs",
+    "demo-files": "node scripts/make-demo-files.mjs --force"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

@@ -10,6 +10,8 @@ Three automations for UK temp and contract recruitment agencies, running on a lo
 
 Hiring decisions are never automated. Compliance flags are prompts for a human to review, not decisions.
 
+> A second demo, a farm admin agent for New Zealand agribusiness (invoices, farm plan evidence, consents and certificates), lives in [agri-nz/](agri-nz/README.md). It runs on its own ports (5680 and 5681), so both demos can run at the same time.
+
 ## Run it
 
 ```powershell

@@ -1,0 +1,1660 @@
+{
+  "id": "agriRegister0001",
+  "name": "3 · Consents and certificates: watch → remind → verify",
+  "nodes": [
+    {
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        -200
+      ],
+      "parameters": {
+        "content": "## 3 · Consents and certificates: watch → remind → verify\nDaily: work out where every record stands. Consent renewals follow the renewal timing in section 124 of the Resource Management Act (the months are settings, because the rules are being changed). Certificates, vehicle checks and insurance use 30-day and 7-day warnings.\nReminders get closer together as the date nears. Expired or missing records tell the operations manager what not to assign until a person has sorted it.",
+        "width": 1700,
+        "height": 140,
+        "color": 5
+      },
+      "id": "753a410a-8ed9-448e-a742-d7d2703e24e8"
+    },
+    {
+      "name": "Lane: watch",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        -20
+      ],
+      "parameters": {
+        "content": "### Daily 07:00 NZ (or from the console): watch the register\nOne summary to the admin, one \"do not assign\" alert to the operations manager, and a reminder to each person responsible.",
+        "width": 1320,
+        "height": 640,
+        "color": 7
+      },
+      "id": "42f6f18a-88af-4541-a596-c4b67c8b2329"
+    },
+    {
+      "name": "Every day 07:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        60
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "3edfc3f8-efd8-4168-ab2e-27dc598449d4"
+    },
+    {
+      "name": "Run from console",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "f3943a61-97c3-4305-a8a3-2496bc90958a"
+    },
+    {
+      "name": "Load data (watch)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        60
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "agriLoadData0001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "90f6c6c9-8f68-4cec-ae34-ddde1c64b094"
+    },
+    {
+      "name": "Watch the register",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        60
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst TZ = 'Pacific/Auckland';\nconst DAY_MS = 86400000;\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst round2 = (n) => Math.round(Number((Number(n || 0) * 100).toFixed(6))) / 100;\nconst money = (n) => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD' }).format(Number(n || 0));\nconst priceText = (n) => '$' + Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 4 });\nconst qtyText = (n) => Number(n || 0).toLocaleString('en-NZ', { maximumFractionDigits: 2 });\nconst unitText = (qty, unit) => (Number(qty) !== 1 && { load: 'loads', bale: 'bales' }[unit]) || unit;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\n// Each call is one millisecond later than the last, so rows written in one run keep their order.\nlet _seq = 0;\nconst nowIso = () => new Date(Date.now() + _seq++).toISOString();\n\n// Calendar dates are plain \"YYYY-MM-DD\" strings in New Zealand time, so this PC's own clock never matters.\nconst nzToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());\nconst dateOf = (s) => new Date(`${String(s).slice(0, 10)}T00:00:00Z`);\nconst isoDay = (d) => d.toISOString().slice(0, 10);\nconst addDays = (s, n) => isoDay(new Date(dateOf(s).getTime() + n * DAY_MS));\nconst addMonths = (s, n) => {\n  const d = dateOf(s);\n  const day = d.getUTCDate();\n  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));\n  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();\n  target.setUTCDate(Math.min(day, last));\n  return isoDay(target);\n};\nconst daysBetween = (from, to) => Math.round((dateOf(to) - dateOf(from)) / DAY_MS);\nconst fmtDate = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) : '—');\nconst fmtLong = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—');\nconst fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('en-NZ', { timeZone: TZ, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '');\nconst ago = (iso) => {\n  if (!iso) return '';\n  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));\n  if (s < 60) return 'just now';\n  if (s < 3600) return `${Math.round(s / 60)} min ago`;\n  if (s < 86400) return `${Math.round(s / 3600)} h ago`;\n  return `${Math.round(s / 86400)} d ago`;\n};\n\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst firstName = (name) => String(name || '').split(' ')[0];\nconst person = (cfg, role) => ({ name: cfg[`${role}_name`] || '', email: cfg[`${role}_email`] || '', phone: cfg[`${role}_phone`] || '' });\n\n// A message for the Shared · Send message workflow. Nothing is sent from anywhere else.\nconst msg = (m) => ({\n  channel: m.channel, to_name: m.to_name || '', to_address: m.to_address || '', subject: m.subject || '',\n  body: m.body || '', link: m.link || '', related: m.related || '', workflow: m.workflow || '',\n});\n// Text the phone if we have one, otherwise email. `both` sends the email as well.\nconst reach = (p, m, how = 'auto') => {\n  const out = [];\n  const to = { to_name: p.name, related: m.related, workflow: m.workflow };\n  if (p.phone && how !== 'email') out.push(msg({ ...to, channel: 'SMS', to_address: p.phone, body: m.sms || m.body, link: m.link }));\n  if (p.email && (how === 'email' || how === 'both' || !p.phone)) out.push(msg({ ...to, channel: 'Email', to_address: p.email, subject: m.subject, body: m.body, link: m.link }));\n  return out;\n};\n// One line of the audit trail: who did what, to what, and when.\nconst auditRow = (actor, type, flow, subject, action, detail = '') => ({\n  at: nowIso(), actor, actor_type: type, flow, subject: String(subject).slice(0, 200), action: String(action).slice(0, 200), detail: String(detail).slice(0, 700),\n});\n// The page a webhook link returns after a person acts: back to the console, on the same tab, with a notice.\nconst backToConsole = (cfg, tab, notice) => `${cfg.base_url}/webhook/console?tab=${encodeURIComponent(tab || 'gate')}&done=${encodeURIComponent(notice)}`;\n\nconst pill = (tone, text) => `<span class=\"pill ${tone}\">${esc(text)}</span>`;\nconst callout = (tone, html) => `<div class=\"callout ${tone}\">${html}</div>`;\n\n// One type family (Figtree, from Google Fonts) with the system font as the fallback when offline.\nconst FONT_LINK = '<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap\">';\n// The business's mark: three tussock blades on dark teal.\nconst BRAND_MARK = '<svg class=\"mark\" width=\"34\" height=\"34\" viewBox=\"0 0 34 34\" aria-hidden=\"true\"><rect width=\"34\" height=\"34\" rx=\"10\" fill=\"#0e3a35\"/><g fill=\"none\" stroke=\"#d6f04a\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M17 26V10\"/><path d=\"M17 26c-.8-5.6-3.8-9-8.5-11\"/><path d=\"M17 26c.8-5.6 3.8-9 8.5-11\"/></g></svg>';\n\nconst THEME = `\n:root{--bg:#f6f4ee;--paper:#fff;--ink:#0f1f1b;--ink2:#34433f;--muted:#6b7672;--line:#e8e5dc;--line2:#d9d5c9;--fill:#efece4;\n--teal:#0e3a35;--teal2:#1d5c53;--teal3:#2f7a6e;--lime:#d6f04a;\n--ok:#18794e;--okbg:#e5f3ea;--warn:#8f5600;--warnbg:#fbf0d6;--bad:#b42318;--badbg:#fdeceb;--info:#1f5f8b;--infobg:#e7f0f8;\n--font:\"Figtree\",-apple-system,BlinkMacSystemFont,\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,sans-serif;\n--shadow:0 1px 2px rgba(15,31,27,.04),0 10px 30px -14px rgba(15,31,27,.14)}\n*{box-sizing:border-box}\nhtml{-webkit-text-size-adjust:100%}\nbody{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}\n.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}\n.top b{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.01em}\n.top b .mark{width:28px;height:28px}\n.top span{font-size:12.5px;font-weight:600;color:var(--teal2);background:#e6efeb;border-radius:999px;padding:4px 12px;white-space:nowrap}\n.card{max-width:640px;margin:36px auto;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:36px;box-shadow:var(--shadow)}\n.card.wide{max-width:900px}\nh1{font-weight:650;font-size:32px;line-height:1.12;letter-spacing:-.03em;margin:0 0 10px}\nh2{font-weight:650;font-size:19px;line-height:1.3;letter-spacing:-.015em;margin:30px 0 10px}\np{margin:6px 0 14px;color:var(--ink2)}.muted{color:var(--muted);font-size:14px}\na{color:var(--teal2);text-underline-offset:3px}\nlabel{display:block;font-weight:600;font-size:14px;margin:18px 0 6px}\ninput,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;font:inherit;font-size:15.5px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}\ninput[type=file]{padding:10px 12px;background:var(--bg)}\ninput[type=checkbox]{accent-color:var(--teal2)}\ntextarea{min-height:110px;resize:vertical}\ninput:focus,select:focus,textarea:focus{outline:0;border-color:var(--teal3);box-shadow:0 0 0 4px rgba(47,122,110,.16)}\n.btn:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(47,122,110,.4);outline-offset:2px}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--teal);color:#fff;border:1px solid transparent;border-radius:999px;padding:0 24px;min-height:50px;font:600 15.5px var(--font);cursor:pointer;text-decoration:none;margin-top:18px;text-align:center;transition:background .15s,transform .08s}\n.btn:hover{background:#0a2925}.btn:active{transform:scale(.98)}\n.btn.go{background:var(--ok)}.btn.go:hover{background:#12623e}\n.btn.line{background:#fff;color:var(--ink);border-color:var(--line2)}.btn.line:hover{background:var(--fill)}\n.btn.stop{background:#fff;color:var(--bad);border-color:#efc3be}.btn.stop:hover{background:var(--badbg)}\n.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1.45;white-space:nowrap;vertical-align:1px}\n.pill::before{content:\"\";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}\n.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}\n.pill.info{background:var(--infobg);color:var(--info)}.pill.grey{background:var(--fill);color:var(--muted)}\n.callout{border-radius:16px;padding:14px 18px;margin:16px 0;font-size:15px;line-height:1.5}\n.callout.ok{background:var(--okbg);color:#0f5132}.callout.warn{background:var(--warnbg);color:#5c3a00}\n.callout.bad{background:var(--badbg);color:#7a1a12}.callout.info{background:var(--infobg);color:#173f5f}\ntable.kv{width:100%;border-collapse:collapse;margin:10px 0}\ntable.kv td{padding:11px 4px;border-bottom:1px solid var(--line);vertical-align:top;font-size:15px}\ntable.kv tr:last-child td{border-bottom:0}\ntable.kv td:first-child{color:var(--muted);width:36%}\ntable.list{width:100%;border-collapse:collapse;margin:10px 0}\ntable.list th{font-size:12.5px;color:var(--muted);text-align:left;font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line)}\ntable.list td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14.5px}\n.num{text-align:right;font-variant-numeric:tabular-nums}\n.chk{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}\n.chk:last-child{border-bottom:0}\n.chk .i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700}\n.chk.ok .i{background:var(--okbg);color:var(--ok)}.chk.warn .i{background:var(--warnbg);color:var(--warn)}.chk.high .i{background:var(--bad);color:#fff}\n.chk b{display:block;font-size:15px;font-weight:600}.chk span{color:var(--ink2);font-size:14.5px}\n.qcard{display:block;border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;text-decoration:none;color:inherit;background:#fff;transition:border-color .15s,box-shadow .15s}\n.qcard:hover{border-color:var(--line2);box-shadow:var(--shadow)}.qcard .t{display:flex;justify-content:space-between;gap:10px;font-weight:650}.qcard .r{margin-top:6px;font-size:14px;color:var(--ink2)}\n.stack>form{border-top:1px solid var(--line);padding-top:10px;margin-top:20px}\n.stack h3{font-weight:650;font-size:17px;letter-spacing:-.01em;margin:14px 0 2px}\ndetails summary{cursor:pointer}\n.sheet h1{font-size:30px}\n.sheet table.list td,.sheet table.list th{padding:9px 8px}\n.foot{text-align:center;color:var(--muted);font-size:12.5px;margin:12px 16px 40px}\n@media(max-width:560px){.card{margin:0;border-radius:0;border-left:0;border-right:0;padding:26px 18px;box-shadow:none}.btn{display:flex;width:100%}.btn.inline{display:inline-flex;width:auto}h1{font-size:27px}}\n@media print{.top,.foot,.noprint{display:none!important}body{background:#fff}.card{border:0;margin:0;max-width:none;padding:0;box-shadow:none}}\n`;\n\n// A clean, mobile-friendly page for approvers, suppliers, contractors and the certifier.\nconst page = (title, body, opts = {}) => {\n  const cfg = configFrom();\n  return `<!doctype html><html lang=\"en-NZ\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>${FONT_LINK}<style>${THEME}</style></head><body>\n<header class=\"top\"><b>${BRAND_MARK}${esc(cfg.business_name || 'Tussock Ridge Farming Ltd')}</b><span>${esc(opts.tag || 'Secure link')}</span></header>\n<main class=\"card${opts.wide ? ' wide' : ''}\">${body}</main>\n<div class=\"foot\">Demo by Forrof. All people, businesses and numbers are fictional.</div></body></html>`;\n};\n\n// How the agent reads a consent, certificate or other record that expires. Injected into the nodes that watch or show the register.\n//\n// Consents follow the renewal rule in section 124 of the Resource Management Act: lodge a renewal at least 6 months before\n// expiry and you may keep operating until the council decides; lodge 3 to 6 months before and the council decides whether you\n// may; lodge later and you must stop when the consent expires. The months are settings because the rules are being changed.\n// Certificates, vehicle fitness and insurance use simple 30-day and 7-day warnings.\nconst REG_RANK = { expired: 0, late: 1, urgent: 2, missing: 3, lodge: 4, soon: 5, plan: 6, lodged: 7, ok: 8 };\n// How many days to leave between reminders to the person responsible, by state.\nconst REG_CADENCE = { expired: 7, missing: 7, urgent: 3, soon: 14, late: 3, lodge: 7, plan: 30 };\nconst regNeedsAction = (state) => ['expired', 'late', 'urgent', 'missing', 'lodge', 'soon', 'plan'].includes(state);\n\n// What to tell the person who holds the record. The \"do not assign\" prompt is for the manager, not for them.\nconst selfText = (r, st) => {\n  if (r.kind === 'Consent') return st.detail;\n  const what = r.type.toLowerCase();\n  if (st.state === 'expired') return `Your ${what} expired ${-st.left} day${st.left === -1 ? '' : 's'} ago (${fmtDate(r.expiry_date)}).`;\n  if (st.state === 'missing') return `We have no record of your ${what} on file.`;\n  if (r.expiry_date) return `Your ${what} expires on ${fmtDate(r.expiry_date)} (${st.left} day${st.left === 1 ? '' : 's'}).`;\n  return st.detail;\n};\n\nconst registerState = (r, cfg, today) => {\n  const restriction = r.restriction || '';\n  const stop = restriction ? ` Do not assign ${restriction} until it is sorted.` : '';\n  if (r.status === 'missing' && !r.expiry_date) {\n    return { state: 'missing', tone: 'warn', label: 'No evidence on file', detail: `Nothing on file yet.${stop}`, left: null };\n  }\n  const exp = r.expiry_date;\n  if (!exp) return { state: 'ok', tone: 'ok', label: 'Current', detail: 'No expiry date.', left: null };\n  const left = daysBetween(today, exp);\n  const soonDays = Number(cfg.cert_soon_days || 30);\n  const urgentDays = Number(cfg.cert_urgent_days || 7);\n\n  if (r.kind === 'Consent') {\n    const lodgeBy = addMonths(exp, -Number(cfg.consent_lodge_months || 6));\n    const cutoff = addMonths(exp, -Number(cfg.consent_cutoff_months || 3));\n    const planFrom = addMonths(exp, -Number(cfg.consent_plan_months || 8));\n    if (r.renewal_lodged_at) {\n      const when = String(r.renewal_lodged_at).slice(0, 10);\n      const rule = when <= lodgeBy ? 'at least 6 months before it expires, so you may keep operating until the council decides'\n        : when <= cutoff ? 'between 3 and 6 months before it expires, so keeping on operating is at the council\\'s discretion: get its agreement in writing'\n          : 'less than 3 months before it expires, so you must stop when it expires unless it is decided first';\n      if (left < 0 && when > lodgeBy) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}). The renewal was lodged ${fmtDate(when)}, ${rule}.${stop}`, left };\n      return { state: 'lodged', tone: 'info', label: 'Renewal lodged', detail: `Renewal lodged ${fmtDate(when)}, ${rule}.`, left };\n    }\n    if (left < 0) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}).${stop}`, left };\n    if (today > cutoff) return { state: 'late', tone: 'bad', label: 'Past the cut-off', detail: `Less than ${cfg.consent_cutoff_months || 3} months left and no renewal lodged. Unless it is renewed first, you must stop ${restriction || 'the activity'} when it expires on ${fmtDate(exp)}. Call your consultant today.`, left };\n    if (today > lodgeBy) return { state: 'lodge', tone: 'warn', label: 'Lodge the renewal now', detail: `The ${cfg.consent_lodge_months || 6}-month date (${fmtDate(lodgeBy)}) has passed, so the council now decides whether you may keep operating while it processes a renewal. Lodge by ${fmtDate(cutoff)} at the latest.`, left };\n    if (today >= planFrom) return { state: 'plan', tone: 'warn', label: 'Plan the renewal', detail: `Lodge the renewal by ${fmtDate(lodgeBy)} (${cfg.consent_lodge_months || 6} months before expiry) to keep operating as of right while the council decides.`, left };\n    return { state: 'ok', tone: 'ok', label: 'Current', detail: `Expires ${fmtDate(exp)}. Lodge a renewal by ${fmtDate(lodgeBy)}.`, left };\n  }\n\n  if (left < 0) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}).${stop}`, left };\n  if (left <= urgentDays) return { state: 'urgent', tone: 'bad', label: `Expires in ${left} day${left === 1 ? '' : 's'}`, detail: `Expires ${fmtDate(exp)}.`, left };\n  if (left <= soonDays) return { state: 'soon', tone: 'warn', label: `Expires in ${left} days`, detail: `Expires ${fmtDate(exp)}.`, left };\n  return { state: 'ok', tone: 'ok', label: 'Current', detail: `Expires ${fmtDate(exp)}.`, left };\n};\n\n// \"Consents and certificates watch\": works out where every record stands, reminds the person responsible on a schedule\n// that tightens as the date nears, and tells the admin and the operations manager what needs action.\n// It never changes a certificate or consent record itself. Returns { updates, messages, audit, summary }.\nconst cfg = configFrom();\nconst base = cfg.base_url;\nconst today = nzToday();\nconst nowMs = Date.now();\nconst rows = tableRows('Register');\nconst farms = Object.fromEntries(tableRows('Farms').map((f) => [f.farm_id, f]));\nconst updates = [];\nconst messages = [];\nconst audit = [];\nconst states = [];\nconst toVerify = [];\nlet reminded = 0;\n\nfor (const r of rows) {\n  const st = registerState(r, cfg, today);\n  states.push({ r, st });\n  const upd = { id: r.id };\n  const changed = r.last_state !== st.state && (st.state !== 'ok' || !!r.last_state);\n  if (r.last_state !== st.state) upd.last_state = st.state;\n  let remindedNow = false;\n  if (r.status === 'received') { toVerify.push(r); }\n  else if (regNeedsAction(st.state)) {\n    const last = r.last_reminder_at ? new Date(r.last_reminder_at).getTime() : 0;\n    const due = !last || nowMs - last >= REG_CADENCE[st.state] * DAY_MS;\n    if (due && nowMs - last >= DAY_MS) {\n      const who = { name: r.responsible_name, email: r.responsible_email, phone: r.responsible_phone };\n      const link = `${base}/webhook/register/upload?t=${r.upload_token}`;\n      const lead = `Kia ora ${firstName(who.name)}, this is the ${cfg.business_name} farm admin assistant (automated).`;\n      const what = r.kind === 'Consent' && r.reference ? `${r.type} (${r.reference})` : r.type;\n      const ask = r.kind === 'Consent' ? 'Upload the renewed consent here once it is granted:' : st.state === 'missing' ? 'Please upload your certificate here:' : 'Please upload the renewal here:';\n      messages.push(...reach(who, {\n        subject: `${what}: ${st.label.toLowerCase()}`,\n        body: `${lead}\\n\\n${r.kind === 'Consent' ? `${what}: ` : ''}${selfText(r, st)}\\n\\n${ask} ${link}`,\n        sms: `${lead} ${what}: ${st.label.toLowerCase()}. ${ask}`,\n        link, related: r.reg_id, workflow: 'Expiry reminder',\n      }, r.kind === 'Consent' ? 'both' : 'auto'));\n      updates.push({ id: r.id, last_reminder_at: nowIso(), reminders_sent: Number(r.reminders_sent || 0) + 1, ...(upd.last_state ? { last_state: upd.last_state } : {}) });\n      audit.push(auditRow('Agent', 'agent', 'Consents', `${r.type}, ${r.responsible_name}`, `Reminded: ${st.label}`, `${st.detail} Sent to ${who.name} by ${who.phone ? 'SMS' : 'email'}${r.kind === 'Consent' ? ' and email' : ''}.`));\n      reminded++;\n      remindedNow = true;\n    }\n  }\n  if (changed && !remindedNow) audit.push(auditRow('Agent', 'agent', 'Consents', `${r.type}, ${r.responsible_name}`, `Status: ${st.label}`, st.detail));\n  if (!remindedNow && Object.keys(upd).length > 1) updates.push(upd);\n}\n\n// One summary for the admin, and a \"do not assign\" alert for the operations manager.\nconst attention = states.filter((x) => regNeedsAction(x.st.state)).sort((a, b) => REG_RANK[a.st.state] - REG_RANK[b.st.state]);\nconst lastSummary = tableRows('Outbox').filter((m) => m.workflow === 'Register summary').map((m) => m.created_at).sort().pop();\nconst summaryRecent = lastSummary && nowMs - new Date(lastSummary).getTime() < 12 * 3600 * 1000;\nconst label = (x) => `${x.r.type}${x.r.reference && x.r.kind !== 'Certificate' ? ` (${x.r.reference})` : ''}, ${x.r.responsible_name}`;\nif ((attention.length || toVerify.length) && !summaryRecent) {\n  const admin = person(cfg, 'admin');\n  messages.push(msg({\n    channel: 'Email', to_name: admin.name, to_address: admin.email, link: `${base}/webhook/console?tab=consents`, related: 'Register', workflow: 'Register summary',\n    subject: `Consents and certificates: ${attention.length} need action${toVerify.length ? `, ${toVerify.length} to verify` : ''}`,\n    body: [`Kia ora ${firstName(admin.name)},`, '',\n      attention.length ? `Needs action:\\n${attention.map((x) => `- ${label(x)}: ${x.st.label}. ${x.st.detail}`).join('\\n')}` : '',\n      toVerify.length ? `\\nUploaded, waiting for you to verify:\\n${toVerify.map((r) => `- ${r.type}, ${r.responsible_name}`).join('\\n')}` : '',\n      '', 'This message is automated.'].filter((x) => x !== '').join('\\n'),\n  }));\n  audit.push(auditRow('Agent', 'agent', 'Consents', 'Register', `Sent ${admin.name} the summary`, `${attention.length} need action, ${toVerify.length} to verify.`));\n  const blocked = attention.filter((x) => x.r.restriction && ['expired', 'missing', 'late', 'urgent'].includes(x.st.state));\n  if (blocked.length) {\n    const mgr = person(cfg, 'manager');\n    messages.push(...reach(mgr, {\n      subject: `Do not assign: ${blocked.length} restriction${blocked.length === 1 ? '' : 's'}`,\n      body: `Kia ora ${firstName(mgr.name)},\\n\\nUntil these are sorted, do not assign:\\n${blocked.map((x) => `- ${x.r.restriction}: ${x.r.responsible_name}'s ${x.r.type.toLowerCase()} is ${x.st.state === 'missing' ? 'not on file' : x.st.state === 'expired' ? 'expired' : 'about to expire'}`).join('\\n')}\\n\\nThis is a prompt for you to check, not a ruling. This message is automated.`,\n      sms: `Do not assign until sorted: ${blocked.map((x) => `${x.r.restriction} (${x.r.responsible_name})`).join('; ')}. Details are in your email.`,\n      link: `${base}/webhook/console?tab=consents`, related: 'Register', workflow: 'Do not assign',\n    }, 'both'));\n    audit.push(auditRow('Agent', 'agent', 'Consents', 'Register', `Told ${mgr.name} what not to assign`, blocked.map((x) => `${x.r.restriction}: ${x.r.responsible_name}`).join('; ')));\n  }\n}\n\nconst count = (...s) => states.filter((x) => s.includes(x.st.state)).length;\nconst parts = [];\nif (count('expired')) parts.push(`${count('expired')} expired`);\nif (count('late', 'urgent', 'soon')) parts.push(`${count('late', 'urgent', 'soon')} expiring soon`);\nif (count('lodge', 'plan')) parts.push(`${count('lodge', 'plan')} consent renewal${count('lodge', 'plan') === 1 ? '' : 's'} to plan`);\nif (count('missing')) parts.push(`${count('missing')} with no evidence`);\nreturn [{ json: { updates, messages, audit, summary: `Checked ${rows.length} records: ${parts.join(', ') || 'all current'}. Sent ${reminded} reminder${reminded === 1 ? '' : 's'}.` } }];\n"
+      },
+      "id": "701e7a31-4bb4-4f2f-a0d6-519dafa2485e"
+    },
+    {
+      "name": "Reminder log",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        60
+      ],
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "db9b9918-01b1-4e94-a305-84455e1cdcc4"
+    },
+    {
+      "name": "Update register",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        60
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Register"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "8f2dc070-46c9-419c-a3ef-ad6b6db68612"
+    },
+    {
+      "name": "Reminders and alerts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        200
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "5b7f43e5-7e68-4002-ab06-e1815d765524"
+    },
+    {
+      "name": "Send reminders and alerts",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        200
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "agriSendMessage1"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "be774c58-eba5-4b11-ae45-b5cb040e87aa"
+    },
+    {
+      "name": "Watch audit",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        340
+      ],
+      "parameters": {
+        "fieldToSplitOut": "audit",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "117b97e1-fb9b-467b-ad62-ded9be84b90b"
+    },
+    {
+      "name": "Log the watch",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        340
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Audit log"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "ff3ea749-2597-4403-a781-7b2c6bc877c4"
+    },
+    {
+      "name": "Watch result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        480
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst TZ = 'Pacific/Auckland';\nconst DAY_MS = 86400000;\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst round2 = (n) => Math.round(Number((Number(n || 0) * 100).toFixed(6))) / 100;\nconst money = (n) => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD' }).format(Number(n || 0));\nconst priceText = (n) => '$' + Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 4 });\nconst qtyText = (n) => Number(n || 0).toLocaleString('en-NZ', { maximumFractionDigits: 2 });\nconst unitText = (qty, unit) => (Number(qty) !== 1 && { load: 'loads', bale: 'bales' }[unit]) || unit;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\n// Each call is one millisecond later than the last, so rows written in one run keep their order.\nlet _seq = 0;\nconst nowIso = () => new Date(Date.now() + _seq++).toISOString();\n\n// Calendar dates are plain \"YYYY-MM-DD\" strings in New Zealand time, so this PC's own clock never matters.\nconst nzToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());\nconst dateOf = (s) => new Date(`${String(s).slice(0, 10)}T00:00:00Z`);\nconst isoDay = (d) => d.toISOString().slice(0, 10);\nconst addDays = (s, n) => isoDay(new Date(dateOf(s).getTime() + n * DAY_MS));\nconst addMonths = (s, n) => {\n  const d = dateOf(s);\n  const day = d.getUTCDate();\n  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));\n  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();\n  target.setUTCDate(Math.min(day, last));\n  return isoDay(target);\n};\nconst daysBetween = (from, to) => Math.round((dateOf(to) - dateOf(from)) / DAY_MS);\nconst fmtDate = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) : '—');\nconst fmtLong = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—');\nconst fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('en-NZ', { timeZone: TZ, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '');\nconst ago = (iso) => {\n  if (!iso) return '';\n  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));\n  if (s < 60) return 'just now';\n  if (s < 3600) return `${Math.round(s / 60)} min ago`;\n  if (s < 86400) return `${Math.round(s / 3600)} h ago`;\n  return `${Math.round(s / 86400)} d ago`;\n};\n\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst firstName = (name) => String(name || '').split(' ')[0];\nconst person = (cfg, role) => ({ name: cfg[`${role}_name`] || '', email: cfg[`${role}_email`] || '', phone: cfg[`${role}_phone`] || '' });\n\n// A message for the Shared · Send message workflow. Nothing is sent from anywhere else.\nconst msg = (m) => ({\n  channel: m.channel, to_name: m.to_name || '', to_address: m.to_address || '', subject: m.subject || '',\n  body: m.body || '', link: m.link || '', related: m.related || '', workflow: m.workflow || '',\n});\n// Text the phone if we have one, otherwise email. `both` sends the email as well.\nconst reach = (p, m, how = 'auto') => {\n  const out = [];\n  const to = { to_name: p.name, related: m.related, workflow: m.workflow };\n  if (p.phone && how !== 'email') out.push(msg({ ...to, channel: 'SMS', to_address: p.phone, body: m.sms || m.body, link: m.link }));\n  if (p.email && (how === 'email' || how === 'both' || !p.phone)) out.push(msg({ ...to, channel: 'Email', to_address: p.email, subject: m.subject, body: m.body, link: m.link }));\n  return out;\n};\n// One line of the audit trail: who did what, to what, and when.\nconst auditRow = (actor, type, flow, subject, action, detail = '') => ({\n  at: nowIso(), actor, actor_type: type, flow, subject: String(subject).slice(0, 200), action: String(action).slice(0, 200), detail: String(detail).slice(0, 700),\n});\n// The page a webhook link returns after a person acts: back to the console, on the same tab, with a notice.\nconst backToConsole = (cfg, tab, notice) => `${cfg.base_url}/webhook/console?tab=${encodeURIComponent(tab || 'gate')}&done=${encodeURIComponent(notice)}`;\n\nconst pill = (tone, text) => `<span class=\"pill ${tone}\">${esc(text)}</span>`;\nconst callout = (tone, html) => `<div class=\"callout ${tone}\">${html}</div>`;\n\n// One type family (Figtree, from Google Fonts) with the system font as the fallback when offline.\nconst FONT_LINK = '<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap\">';\n// The business's mark: three tussock blades on dark teal.\nconst BRAND_MARK = '<svg class=\"mark\" width=\"34\" height=\"34\" viewBox=\"0 0 34 34\" aria-hidden=\"true\"><rect width=\"34\" height=\"34\" rx=\"10\" fill=\"#0e3a35\"/><g fill=\"none\" stroke=\"#d6f04a\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M17 26V10\"/><path d=\"M17 26c-.8-5.6-3.8-9-8.5-11\"/><path d=\"M17 26c.8-5.6 3.8-9 8.5-11\"/></g></svg>';\n\nconst THEME = `\n:root{--bg:#f6f4ee;--paper:#fff;--ink:#0f1f1b;--ink2:#34433f;--muted:#6b7672;--line:#e8e5dc;--line2:#d9d5c9;--fill:#efece4;\n--teal:#0e3a35;--teal2:#1d5c53;--teal3:#2f7a6e;--lime:#d6f04a;\n--ok:#18794e;--okbg:#e5f3ea;--warn:#8f5600;--warnbg:#fbf0d6;--bad:#b42318;--badbg:#fdeceb;--info:#1f5f8b;--infobg:#e7f0f8;\n--font:\"Figtree\",-apple-system,BlinkMacSystemFont,\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,sans-serif;\n--shadow:0 1px 2px rgba(15,31,27,.04),0 10px 30px -14px rgba(15,31,27,.14)}\n*{box-sizing:border-box}\nhtml{-webkit-text-size-adjust:100%}\nbody{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}\n.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}\n.top b{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.01em}\n.top b .mark{width:28px;height:28px}\n.top span{font-size:12.5px;font-weight:600;color:var(--teal2);background:#e6efeb;border-radius:999px;padding:4px 12px;white-space:nowrap}\n.card{max-width:640px;margin:36px auto;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:36px;box-shadow:var(--shadow)}\n.card.wide{max-width:900px}\nh1{font-weight:650;font-size:32px;line-height:1.12;letter-spacing:-.03em;margin:0 0 10px}\nh2{font-weight:650;font-size:19px;line-height:1.3;letter-spacing:-.015em;margin:30px 0 10px}\np{margin:6px 0 14px;color:var(--ink2)}.muted{color:var(--muted);font-size:14px}\na{color:var(--teal2);text-underline-offset:3px}\nlabel{display:block;font-weight:600;font-size:14px;margin:18px 0 6px}\ninput,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;font:inherit;font-size:15.5px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}\ninput[type=file]{padding:10px 12px;background:var(--bg)}\ninput[type=checkbox]{accent-color:var(--teal2)}\ntextarea{min-height:110px;resize:vertical}\ninput:focus,select:focus,textarea:focus{outline:0;border-color:var(--teal3);box-shadow:0 0 0 4px rgba(47,122,110,.16)}\n.btn:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(47,122,110,.4);outline-offset:2px}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--teal);color:#fff;border:1px solid transparent;border-radius:999px;padding:0 24px;min-height:50px;font:600 15.5px var(--font);cursor:pointer;text-decoration:none;margin-top:18px;text-align:center;transition:background .15s,transform .08s}\n.btn:hover{background:#0a2925}.btn:active{transform:scale(.98)}\n.btn.go{background:var(--ok)}.btn.go:hover{background:#12623e}\n.btn.line{background:#fff;color:var(--ink);border-color:var(--line2)}.btn.line:hover{background:var(--fill)}\n.btn.stop{background:#fff;color:var(--bad);border-color:#efc3be}.btn.stop:hover{background:var(--badbg)}\n.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1.45;white-space:nowrap;vertical-align:1px}\n.pill::before{content:\"\";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}\n.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}\n.pill.info{background:var(--infobg);color:var(--info)}.pill.grey{background:var(--fill);color:var(--muted)}\n.callout{border-radius:16px;padding:14px 18px;margin:16px 0;font-size:15px;line-height:1.5}\n.callout.ok{background:var(--okbg);color:#0f5132}.callout.warn{background:var(--warnbg);color:#5c3a00}\n.callout.bad{background:var(--badbg);color:#7a1a12}.callout.info{background:var(--infobg);color:#173f5f}\ntable.kv{width:100%;border-collapse:collapse;margin:10px 0}\ntable.kv td{padding:11px 4px;border-bottom:1px solid var(--line);vertical-align:top;font-size:15px}\ntable.kv tr:last-child td{border-bottom:0}\ntable.kv td:first-child{color:var(--muted);width:36%}\ntable.list{width:100%;border-collapse:collapse;margin:10px 0}\ntable.list th{font-size:12.5px;color:var(--muted);text-align:left;font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line)}\ntable.list td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14.5px}\n.num{text-align:right;font-variant-numeric:tabular-nums}\n.chk{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}\n.chk:last-child{border-bottom:0}\n.chk .i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700}\n.chk.ok .i{background:var(--okbg);color:var(--ok)}.chk.warn .i{background:var(--warnbg);color:var(--warn)}.chk.high .i{background:var(--bad);color:#fff}\n.chk b{display:block;font-size:15px;font-weight:600}.chk span{color:var(--ink2);font-size:14.5px}\n.qcard{display:block;border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;text-decoration:none;color:inherit;background:#fff;transition:border-color .15s,box-shadow .15s}\n.qcard:hover{border-color:var(--line2);box-shadow:var(--shadow)}.qcard .t{display:flex;justify-content:space-between;gap:10px;font-weight:650}.qcard .r{margin-top:6px;font-size:14px;color:var(--ink2)}\n.stack>form{border-top:1px solid var(--line);padding-top:10px;margin-top:20px}\n.stack h3{font-weight:650;font-size:17px;letter-spacing:-.01em;margin:14px 0 2px}\ndetails summary{cursor:pointer}\n.sheet h1{font-size:30px}\n.sheet table.list td,.sheet table.list th{padding:9px 8px}\n.foot{text-align:center;color:var(--muted);font-size:12.5px;margin:12px 16px 40px}\n@media(max-width:560px){.card{margin:0;border-radius:0;border-left:0;border-right:0;padding:26px 18px;box-shadow:none}.btn{display:flex;width:100%}.btn.inline{display:inline-flex;width:auto}h1{font-size:27px}}\n@media print{.top,.foot,.noprint{display:none!important}body{background:#fff}.card{border:0;margin:0;max-width:none;padding:0;box-shadow:none}}\n`;\n\n// A clean, mobile-friendly page for approvers, suppliers, contractors and the certifier.\nconst page = (title, body, opts = {}) => {\n  const cfg = configFrom();\n  return `<!doctype html><html lang=\"en-NZ\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>${FONT_LINK}<style>${THEME}</style></head><body>\n<header class=\"top\"><b>${BRAND_MARK}${esc(cfg.business_name || 'Tussock Ridge Farming Ltd')}</b><span>${esc(opts.tag || 'Secure link')}</span></header>\n<main class=\"card${opts.wide ? ' wide' : ''}\">${body}</main>\n<div class=\"foot\">Demo by Forrof. All people, businesses and numbers are fictional.</div></body></html>`;\n};\n\n\n// Hand the automation's summary back to the console.\nlet summary = $input.first().json.summary;\nreturn [{ json: { summary: summary || 'Done.' } }];"
+      },
+      "id": "4ecad2ed-5b4c-4902-a467-f25109a65947"
+    },
+    {
+      "name": "Lane: form",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        660
+      ],
+      "parameters": {
+        "content": "### Person opens the upload link\nA photo or PDF of the renewal, and its new expiry date.",
+        "width": 920,
+        "height": 220,
+        "color": 7
+      },
+      "id": "5395467e-0ee4-40eb-aa1a-26af8d5d24e6"
+    },
+    {
+      "name": "Person opens upload link",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        740
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "register/upload",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "1b8a1c53-b524-415f-a84c-4caab7e0a745",
+      "id": "9207b1da-8dc4-40c9-ad1c-4bd633f48f33"
+    },
+    {
+      "name": "Load data (form)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        740
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "agriLoadData0001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "e02ff91a-61cf-43d6-a6e8-ef3a35335d30"
+    },
+    {
+      "name": "Render upload page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        740
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst TZ = 'Pacific/Auckland';\nconst DAY_MS = 86400000;\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst round2 = (n) => Math.round(Number((Number(n || 0) * 100).toFixed(6))) / 100;\nconst money = (n) => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD' }).format(Number(n || 0));\nconst priceText = (n) => '$' + Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 4 });\nconst qtyText = (n) => Number(n || 0).toLocaleString('en-NZ', { maximumFractionDigits: 2 });\nconst unitText = (qty, unit) => (Number(qty) !== 1 && { load: 'loads', bale: 'bales' }[unit]) || unit;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\n// Each call is one millisecond later than the last, so rows written in one run keep their order.\nlet _seq = 0;\nconst nowIso = () => new Date(Date.now() + _seq++).toISOString();\n\n// Calendar dates are plain \"YYYY-MM-DD\" strings in New Zealand time, so this PC's own clock never matters.\nconst nzToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());\nconst dateOf = (s) => new Date(`${String(s).slice(0, 10)}T00:00:00Z`);\nconst isoDay = (d) => d.toISOString().slice(0, 10);\nconst addDays = (s, n) => isoDay(new Date(dateOf(s).getTime() + n * DAY_MS));\nconst addMonths = (s, n) => {\n  const d = dateOf(s);\n  const day = d.getUTCDate();\n  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));\n  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();\n  target.setUTCDate(Math.min(day, last));\n  return isoDay(target);\n};\nconst daysBetween = (from, to) => Math.round((dateOf(to) - dateOf(from)) / DAY_MS);\nconst fmtDate = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) : '—');\nconst fmtLong = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—');\nconst fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('en-NZ', { timeZone: TZ, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '');\nconst ago = (iso) => {\n  if (!iso) return '';\n  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));\n  if (s < 60) return 'just now';\n  if (s < 3600) return `${Math.round(s / 60)} min ago`;\n  if (s < 86400) return `${Math.round(s / 3600)} h ago`;\n  return `${Math.round(s / 86400)} d ago`;\n};\n\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst firstName = (name) => String(name || '').split(' ')[0];\nconst person = (cfg, role) => ({ name: cfg[`${role}_name`] || '', email: cfg[`${role}_email`] || '', phone: cfg[`${role}_phone`] || '' });\n\n// A message for the Shared · Send message workflow. Nothing is sent from anywhere else.\nconst msg = (m) => ({\n  channel: m.channel, to_name: m.to_name || '', to_address: m.to_address || '', subject: m.subject || '',\n  body: m.body || '', link: m.link || '', related: m.related || '', workflow: m.workflow || '',\n});\n// Text the phone if we have one, otherwise email. `both` sends the email as well.\nconst reach = (p, m, how = 'auto') => {\n  const out = [];\n  const to = { to_name: p.name, related: m.related, workflow: m.workflow };\n  if (p.phone && how !== 'email') out.push(msg({ ...to, channel: 'SMS', to_address: p.phone, body: m.sms || m.body, link: m.link }));\n  if (p.email && (how === 'email' || how === 'both' || !p.phone)) out.push(msg({ ...to, channel: 'Email', to_address: p.email, subject: m.subject, body: m.body, link: m.link }));\n  return out;\n};\n// One line of the audit trail: who did what, to what, and when.\nconst auditRow = (actor, type, flow, subject, action, detail = '') => ({\n  at: nowIso(), actor, actor_type: type, flow, subject: String(subject).slice(0, 200), action: String(action).slice(0, 200), detail: String(detail).slice(0, 700),\n});\n// The page a webhook link returns after a person acts: back to the console, on the same tab, with a notice.\nconst backToConsole = (cfg, tab, notice) => `${cfg.base_url}/webhook/console?tab=${encodeURIComponent(tab || 'gate')}&done=${encodeURIComponent(notice)}`;\n\nconst pill = (tone, text) => `<span class=\"pill ${tone}\">${esc(text)}</span>`;\nconst callout = (tone, html) => `<div class=\"callout ${tone}\">${html}</div>`;\n\n// One type family (Figtree, from Google Fonts) with the system font as the fallback when offline.\nconst FONT_LINK = '<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap\">';\n// The business's mark: three tussock blades on dark teal.\nconst BRAND_MARK = '<svg class=\"mark\" width=\"34\" height=\"34\" viewBox=\"0 0 34 34\" aria-hidden=\"true\"><rect width=\"34\" height=\"34\" rx=\"10\" fill=\"#0e3a35\"/><g fill=\"none\" stroke=\"#d6f04a\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M17 26V10\"/><path d=\"M17 26c-.8-5.6-3.8-9-8.5-11\"/><path d=\"M17 26c.8-5.6 3.8-9 8.5-11\"/></g></svg>';\n\nconst THEME = `\n:root{--bg:#f6f4ee;--paper:#fff;--ink:#0f1f1b;--ink2:#34433f;--muted:#6b7672;--line:#e8e5dc;--line2:#d9d5c9;--fill:#efece4;\n--teal:#0e3a35;--teal2:#1d5c53;--teal3:#2f7a6e;--lime:#d6f04a;\n--ok:#18794e;--okbg:#e5f3ea;--warn:#8f5600;--warnbg:#fbf0d6;--bad:#b42318;--badbg:#fdeceb;--info:#1f5f8b;--infobg:#e7f0f8;\n--font:\"Figtree\",-apple-system,BlinkMacSystemFont,\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,sans-serif;\n--shadow:0 1px 2px rgba(15,31,27,.04),0 10px 30px -14px rgba(15,31,27,.14)}\n*{box-sizing:border-box}\nhtml{-webkit-text-size-adjust:100%}\nbody{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}\n.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}\n.top b{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.01em}\n.top b .mark{width:28px;height:28px}\n.top span{font-size:12.5px;font-weight:600;color:var(--teal2);background:#e6efeb;border-radius:999px;padding:4px 12px;white-space:nowrap}\n.card{max-width:640px;margin:36px auto;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:36px;box-shadow:var(--shadow)}\n.card.wide{max-width:900px}\nh1{font-weight:650;font-size:32px;line-height:1.12;letter-spacing:-.03em;margin:0 0 10px}\nh2{font-weight:650;font-size:19px;line-height:1.3;letter-spacing:-.015em;margin:30px 0 10px}\np{margin:6px 0 14px;color:var(--ink2)}.muted{color:var(--muted);font-size:14px}\na{color:var(--teal2);text-underline-offset:3px}\nlabel{display:block;font-weight:600;font-size:14px;margin:18px 0 6px}\ninput,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;font:inherit;font-size:15.5px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}\ninput[type=file]{padding:10px 12px;background:var(--bg)}\ninput[type=checkbox]{accent-color:var(--teal2)}\ntextarea{min-height:110px;resize:vertical}\ninput:focus,select:focus,textarea:focus{outline:0;border-color:var(--teal3);box-shadow:0 0 0 4px rgba(47,122,110,.16)}\n.btn:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(47,122,110,.4);outline-offset:2px}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--teal);color:#fff;border:1px solid transparent;border-radius:999px;padding:0 24px;min-height:50px;font:600 15.5px var(--font);cursor:pointer;text-decoration:none;margin-top:18px;text-align:center;transition:background .15s,transform .08s}\n.btn:hover{background:#0a2925}.btn:active{transform:scale(.98)}\n.btn.go{background:var(--ok)}.btn.go:hover{background:#12623e}\n.btn.line{background:#fff;color:var(--ink);border-color:var(--line2)}.btn.line:hover{background:var(--fill)}\n.btn.stop{background:#fff;color:var(--bad);border-color:#efc3be}.btn.stop:hover{background:var(--badbg)}\n.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1.45;white-space:nowrap;vertical-align:1px}\n.pill::before{content:\"\";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}\n.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}\n.pill.info{background:var(--infobg);color:var(--info)}.pill.grey{background:var(--fill);color:var(--muted)}\n.callout{border-radius:16px;padding:14px 18px;margin:16px 0;font-size:15px;line-height:1.5}\n.callout.ok{background:var(--okbg);color:#0f5132}.callout.warn{background:var(--warnbg);color:#5c3a00}\n.callout.bad{background:var(--badbg);color:#7a1a12}.callout.info{background:var(--infobg);color:#173f5f}\ntable.kv{width:100%;border-collapse:collapse;margin:10px 0}\ntable.kv td{padding:11px 4px;border-bottom:1px solid var(--line);vertical-align:top;font-size:15px}\ntable.kv tr:last-child td{border-bottom:0}\ntable.kv td:first-child{color:var(--muted);width:36%}\ntable.list{width:100%;border-collapse:collapse;margin:10px 0}\ntable.list th{font-size:12.5px;color:var(--muted);text-align:left;font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line)}\ntable.list td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14.5px}\n.num{text-align:right;font-variant-numeric:tabular-nums}\n.chk{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}\n.chk:last-child{border-bottom:0}\n.chk .i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700}\n.chk.ok .i{background:var(--okbg);color:var(--ok)}.chk.warn .i{background:var(--warnbg);color:var(--warn)}.chk.high .i{background:var(--bad);color:#fff}\n.chk b{display:block;font-size:15px;font-weight:600}.chk span{color:var(--ink2);font-size:14.5px}\n.qcard{display:block;border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;text-decoration:none;color:inherit;background:#fff;transition:border-color .15s,box-shadow .15s}\n.qcard:hover{border-color:var(--line2);box-shadow:var(--shadow)}.qcard .t{display:flex;justify-content:space-between;gap:10px;font-weight:650}.qcard .r{margin-top:6px;font-size:14px;color:var(--ink2)}\n.stack>form{border-top:1px solid var(--line);padding-top:10px;margin-top:20px}\n.stack h3{font-weight:650;font-size:17px;letter-spacing:-.01em;margin:14px 0 2px}\ndetails summary{cursor:pointer}\n.sheet h1{font-size:30px}\n.sheet table.list td,.sheet table.list th{padding:9px 8px}\n.foot{text-align:center;color:var(--muted);font-size:12.5px;margin:12px 16px 40px}\n@media(max-width:560px){.card{margin:0;border-radius:0;border-left:0;border-right:0;padding:26px 18px;box-shadow:none}.btn{display:flex;width:100%}.btn.inline{display:inline-flex;width:auto}h1{font-size:27px}}\n@media print{.top,.foot,.noprint{display:none!important}body{background:#fff}.card{border:0;margin:0;max-width:none;padding:0;box-shadow:none}}\n`;\n\n// A clean, mobile-friendly page for approvers, suppliers, contractors and the certifier.\nconst page = (title, body, opts = {}) => {\n  const cfg = configFrom();\n  return `<!doctype html><html lang=\"en-NZ\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>${FONT_LINK}<style>${THEME}</style></head><body>\n<header class=\"top\"><b>${BRAND_MARK}${esc(cfg.business_name || 'Tussock Ridge Farming Ltd')}</b><span>${esc(opts.tag || 'Secure link')}</span></header>\n<main class=\"card${opts.wide ? ' wide' : ''}\">${body}</main>\n<div class=\"foot\">Demo by Forrof. All people, businesses and numbers are fictional.</div></body></html>`;\n};\n\n// How the agent reads a consent, certificate or other record that expires. Injected into the nodes that watch or show the register.\n//\n// Consents follow the renewal rule in section 124 of the Resource Management Act: lodge a renewal at least 6 months before\n// expiry and you may keep operating until the council decides; lodge 3 to 6 months before and the council decides whether you\n// may; lodge later and you must stop when the consent expires. The months are settings because the rules are being changed.\n// Certificates, vehicle fitness and insurance use simple 30-day and 7-day warnings.\nconst REG_RANK = { expired: 0, late: 1, urgent: 2, missing: 3, lodge: 4, soon: 5, plan: 6, lodged: 7, ok: 8 };\n// How many days to leave between reminders to the person responsible, by state.\nconst REG_CADENCE = { expired: 7, missing: 7, urgent: 3, soon: 14, late: 3, lodge: 7, plan: 30 };\nconst regNeedsAction = (state) => ['expired', 'late', 'urgent', 'missing', 'lodge', 'soon', 'plan'].includes(state);\n\n// What to tell the person who holds the record. The \"do not assign\" prompt is for the manager, not for them.\nconst selfText = (r, st) => {\n  if (r.kind === 'Consent') return st.detail;\n  const what = r.type.toLowerCase();\n  if (st.state === 'expired') return `Your ${what} expired ${-st.left} day${st.left === -1 ? '' : 's'} ago (${fmtDate(r.expiry_date)}).`;\n  if (st.state === 'missing') return `We have no record of your ${what} on file.`;\n  if (r.expiry_date) return `Your ${what} expires on ${fmtDate(r.expiry_date)} (${st.left} day${st.left === 1 ? '' : 's'}).`;\n  return st.detail;\n};\n\nconst registerState = (r, cfg, today) => {\n  const restriction = r.restriction || '';\n  const stop = restriction ? ` Do not assign ${restriction} until it is sorted.` : '';\n  if (r.status === 'missing' && !r.expiry_date) {\n    return { state: 'missing', tone: 'warn', label: 'No evidence on file', detail: `Nothing on file yet.${stop}`, left: null };\n  }\n  const exp = r.expiry_date;\n  if (!exp) return { state: 'ok', tone: 'ok', label: 'Current', detail: 'No expiry date.', left: null };\n  const left = daysBetween(today, exp);\n  const soonDays = Number(cfg.cert_soon_days || 30);\n  const urgentDays = Number(cfg.cert_urgent_days || 7);\n\n  if (r.kind === 'Consent') {\n    const lodgeBy = addMonths(exp, -Number(cfg.consent_lodge_months || 6));\n    const cutoff = addMonths(exp, -Number(cfg.consent_cutoff_months || 3));\n    const planFrom = addMonths(exp, -Number(cfg.consent_plan_months || 8));\n    if (r.renewal_lodged_at) {\n      const when = String(r.renewal_lodged_at).slice(0, 10);\n      const rule = when <= lodgeBy ? 'at least 6 months before it expires, so you may keep operating until the council decides'\n        : when <= cutoff ? 'between 3 and 6 months before it expires, so keeping on operating is at the council\\'s discretion: get its agreement in writing'\n          : 'less than 3 months before it expires, so you must stop when it expires unless it is decided first';\n      if (left < 0 && when > lodgeBy) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}). The renewal was lodged ${fmtDate(when)}, ${rule}.${stop}`, left };\n      return { state: 'lodged', tone: 'info', label: 'Renewal lodged', detail: `Renewal lodged ${fmtDate(when)}, ${rule}.`, left };\n    }\n    if (left < 0) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}).${stop}`, left };\n    if (today > cutoff) return { state: 'late', tone: 'bad', label: 'Past the cut-off', detail: `Less than ${cfg.consent_cutoff_months || 3} months left and no renewal lodged. Unless it is renewed first, you must stop ${restriction || 'the activity'} when it expires on ${fmtDate(exp)}. Call your consultant today.`, left };\n    if (today > lodgeBy) return { state: 'lodge', tone: 'warn', label: 'Lodge the renewal now', detail: `The ${cfg.consent_lodge_months || 6}-month date (${fmtDate(lodgeBy)}) has passed, so the council now decides whether you may keep operating while it processes a renewal. Lodge by ${fmtDate(cutoff)} at the latest.`, left };\n    if (today >= planFrom) return { state: 'plan', tone: 'warn', label: 'Plan the renewal', detail: `Lodge the renewal by ${fmtDate(lodgeBy)} (${cfg.consent_lodge_months || 6} months before expiry) to keep operating as of right while the council decides.`, left };\n    return { state: 'ok', tone: 'ok', label: 'Current', detail: `Expires ${fmtDate(exp)}. Lodge a renewal by ${fmtDate(lodgeBy)}.`, left };\n  }\n\n  if (left < 0) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}).${stop}`, left };\n  if (left <= urgentDays) return { state: 'urgent', tone: 'bad', label: `Expires in ${left} day${left === 1 ? '' : 's'}`, detail: `Expires ${fmtDate(exp)}.`, left };\n  if (left <= soonDays) return { state: 'soon', tone: 'warn', label: `Expires in ${left} days`, detail: `Expires ${fmtDate(exp)}.`, left };\n  return { state: 'ok', tone: 'ok', label: 'Current', detail: `Expires ${fmtDate(exp)}.`, left };\n};\n\n// GET /webhook/register/upload?t=TOKEN: the person responsible uploads a renewed certificate or consent from their phone.\nconst cfg = configFrom();\nconst token = String($('Person opens upload link').first().json.query?.t || '');\nconst r = tableRows('Register').find((x) => token && x.upload_token === token);\nif (!r) return [{ json: { html: page('Link not found', `<h1>This upload link has expired</h1><p class=\"muted\">Please contact ${esc(cfg.admin_name)} at ${esc(cfg.business_name)}.</p>`) } }];\nif (r.status === 'received') {\n  return [{ json: { html: page('Received', `<h1>Thanks, ${esc(firstName(r.responsible_name))}</h1>${callout('ok', `We have your ${esc(r.type.toLowerCase())}. ${esc(cfg.admin_name)} is checking it.`)}`) } }];\n}\nconst st = registerState(r, cfg, nzToday());\nconst body = `<h1>${esc(r.type)}</h1>\n<p>Kia ora ${esc(firstName(r.responsible_name))}. ${esc(selfText(r, st))} Upload the ${r.kind === 'Consent' ? 'renewed consent' : 'new certificate'} here. It goes to ${esc(cfg.admin_name)} to check.</p>\n${r.note ? callout('warn', `<b>Please upload it again.</b> ${esc(r.note)}`) : ''}\n<form method=\"post\" action=\"${cfg.base_url}/webhook/register/upload\" enctype=\"multipart/form-data\">\n<input type=\"hidden\" name=\"t\" value=\"${esc(token)}\">\n<label for=\"file\">Document (PDF or photo, up to 10 MB)</label><input id=\"file\" name=\"file\" type=\"file\" accept=\"image/*,application/pdf\" required>\n<label for=\"expiry\">New expiry date</label><input id=\"expiry\" name=\"expiry\" type=\"date\" required>\n<button class=\"btn\" type=\"submit\">Upload securely</button></form>\n<p class=\"muted\">Only ${esc(cfg.business_name)} can see your document. There is no login.</p>`;\nreturn [{ json: { html: page(`Upload: ${r.type}`, body) } }];\n"
+      },
+      "id": "28a6ecbb-a174-4f91-a659-5be8d4ada0f0"
+    },
+    {
+      "name": "Show upload page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        740
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "35c3b81a-7d30-44df-a49e-c3fa5ab47e9d"
+    },
+    {
+      "name": "Lane: upload",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        920
+      ],
+      "parameters": {
+        "content": "### Person uploads the renewal\nStored under files/register. The register keeps the old expiry date until a person has verified the upload.",
+        "width": 1520,
+        "height": 640,
+        "color": 7
+      },
+      "id": "820ecca8-6850-477f-aa69-28ea88fb71e9"
+    },
+    {
+      "name": "Person uploads renewal",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1000
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "register/upload",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "de18c7df-aca5-44c8-a4ce-e2d5057c988b",
+      "id": "9c298229-3530-4e1a-a399-0eb780c60376"
+    },
+    {
+      "name": "Load data (upload)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        1000
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "agriLoadData0001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "dc57c2cc-f0b3-4e25-a89e-15268046b102"
+    },
+    {
+      "name": "Save upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1000
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst TZ = 'Pacific/Auckland';\nconst DAY_MS = 86400000;\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst round2 = (n) => Math.round(Number((Number(n || 0) * 100).toFixed(6))) / 100;\nconst money = (n) => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD' }).format(Number(n || 0));\nconst priceText = (n) => '$' + Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 4 });\nconst qtyText = (n) => Number(n || 0).toLocaleString('en-NZ', { maximumFractionDigits: 2 });\nconst unitText = (qty, unit) => (Number(qty) !== 1 && { load: 'loads', bale: 'bales' }[unit]) || unit;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\n// Each call is one millisecond later than the last, so rows written in one run keep their order.\nlet _seq = 0;\nconst nowIso = () => new Date(Date.now() + _seq++).toISOString();\n\n// Calendar dates are plain \"YYYY-MM-DD\" strings in New Zealand time, so this PC's own clock never matters.\nconst nzToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());\nconst dateOf = (s) => new Date(`${String(s).slice(0, 10)}T00:00:00Z`);\nconst isoDay = (d) => d.toISOString().slice(0, 10);\nconst addDays = (s, n) => isoDay(new Date(dateOf(s).getTime() + n * DAY_MS));\nconst addMonths = (s, n) => {\n  const d = dateOf(s);\n  const day = d.getUTCDate();\n  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));\n  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();\n  target.setUTCDate(Math.min(day, last));\n  return isoDay(target);\n};\nconst daysBetween = (from, to) => Math.round((dateOf(to) - dateOf(from)) / DAY_MS);\nconst fmtDate = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) : '—');\nconst fmtLong = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—');\nconst fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('en-NZ', { timeZone: TZ, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '');\nconst ago = (iso) => {\n  if (!iso) return '';\n  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));\n  if (s < 60) return 'just now';\n  if (s < 3600) return `${Math.round(s / 60)} min ago`;\n  if (s < 86400) return `${Math.round(s / 3600)} h ago`;\n  return `${Math.round(s / 86400)} d ago`;\n};\n\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst firstName = (name) => String(name || '').split(' ')[0];\nconst person = (cfg, role) => ({ name: cfg[`${role}_name`] || '', email: cfg[`${role}_email`] || '', phone: cfg[`${role}_phone`] || '' });\n\n// A message for the Shared · Send message workflow. Nothing is sent from anywhere else.\nconst msg = (m) => ({\n  channel: m.channel, to_name: m.to_name || '', to_address: m.to_address || '', subject: m.subject || '',\n  body: m.body || '', link: m.link || '', related: m.related || '', workflow: m.workflow || '',\n});\n// Text the phone if we have one, otherwise email. `both` sends the email as well.\nconst reach = (p, m, how = 'auto') => {\n  const out = [];\n  const to = { to_name: p.name, related: m.related, workflow: m.workflow };\n  if (p.phone && how !== 'email') out.push(msg({ ...to, channel: 'SMS', to_address: p.phone, body: m.sms || m.body, link: m.link }));\n  if (p.email && (how === 'email' || how === 'both' || !p.phone)) out.push(msg({ ...to, channel: 'Email', to_address: p.email, subject: m.subject, body: m.body, link: m.link }));\n  return out;\n};\n// One line of the audit trail: who did what, to what, and when.\nconst auditRow = (actor, type, flow, subject, action, detail = '') => ({\n  at: nowIso(), actor, actor_type: type, flow, subject: String(subject).slice(0, 200), action: String(action).slice(0, 200), detail: String(detail).slice(0, 700),\n});\n// The page a webhook link returns after a person acts: back to the console, on the same tab, with a notice.\nconst backToConsole = (cfg, tab, notice) => `${cfg.base_url}/webhook/console?tab=${encodeURIComponent(tab || 'gate')}&done=${encodeURIComponent(notice)}`;\n\nconst pill = (tone, text) => `<span class=\"pill ${tone}\">${esc(text)}</span>`;\nconst callout = (tone, html) => `<div class=\"callout ${tone}\">${html}</div>`;\n\n// One type family (Figtree, from Google Fonts) with the system font as the fallback when offline.\nconst FONT_LINK = '<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap\">';\n// The business's mark: three tussock blades on dark teal.\nconst BRAND_MARK = '<svg class=\"mark\" width=\"34\" height=\"34\" viewBox=\"0 0 34 34\" aria-hidden=\"true\"><rect width=\"34\" height=\"34\" rx=\"10\" fill=\"#0e3a35\"/><g fill=\"none\" stroke=\"#d6f04a\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M17 26V10\"/><path d=\"M17 26c-.8-5.6-3.8-9-8.5-11\"/><path d=\"M17 26c.8-5.6 3.8-9 8.5-11\"/></g></svg>';\n\nconst THEME = `\n:root{--bg:#f6f4ee;--paper:#fff;--ink:#0f1f1b;--ink2:#34433f;--muted:#6b7672;--line:#e8e5dc;--line2:#d9d5c9;--fill:#efece4;\n--teal:#0e3a35;--teal2:#1d5c53;--teal3:#2f7a6e;--lime:#d6f04a;\n--ok:#18794e;--okbg:#e5f3ea;--warn:#8f5600;--warnbg:#fbf0d6;--bad:#b42318;--badbg:#fdeceb;--info:#1f5f8b;--infobg:#e7f0f8;\n--font:\"Figtree\",-apple-system,BlinkMacSystemFont,\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,sans-serif;\n--shadow:0 1px 2px rgba(15,31,27,.04),0 10px 30px -14px rgba(15,31,27,.14)}\n*{box-sizing:border-box}\nhtml{-webkit-text-size-adjust:100%}\nbody{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}\n.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}\n.top b{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.01em}\n.top b .mark{width:28px;height:28px}\n.top span{font-size:12.5px;font-weight:600;color:var(--teal2);background:#e6efeb;border-radius:999px;padding:4px 12px;white-space:nowrap}\n.card{max-width:640px;margin:36px auto;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:36px;box-shadow:var(--shadow)}\n.card.wide{max-width:900px}\nh1{font-weight:650;font-size:32px;line-height:1.12;letter-spacing:-.03em;margin:0 0 10px}\nh2{font-weight:650;font-size:19px;line-height:1.3;letter-spacing:-.015em;margin:30px 0 10px}\np{margin:6px 0 14px;color:var(--ink2)}.muted{color:var(--muted);font-size:14px}\na{color:var(--teal2);text-underline-offset:3px}\nlabel{display:block;font-weight:600;font-size:14px;margin:18px 0 6px}\ninput,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;font:inherit;font-size:15.5px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}\ninput[type=file]{padding:10px 12px;background:var(--bg)}\ninput[type=checkbox]{accent-color:var(--teal2)}\ntextarea{min-height:110px;resize:vertical}\ninput:focus,select:focus,textarea:focus{outline:0;border-color:var(--teal3);box-shadow:0 0 0 4px rgba(47,122,110,.16)}\n.btn:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(47,122,110,.4);outline-offset:2px}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--teal);color:#fff;border:1px solid transparent;border-radius:999px;padding:0 24px;min-height:50px;font:600 15.5px var(--font);cursor:pointer;text-decoration:none;margin-top:18px;text-align:center;transition:background .15s,transform .08s}\n.btn:hover{background:#0a2925}.btn:active{transform:scale(.98)}\n.btn.go{background:var(--ok)}.btn.go:hover{background:#12623e}\n.btn.line{background:#fff;color:var(--ink);border-color:var(--line2)}.btn.line:hover{background:var(--fill)}\n.btn.stop{background:#fff;color:var(--bad);border-color:#efc3be}.btn.stop:hover{background:var(--badbg)}\n.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1.45;white-space:nowrap;vertical-align:1px}\n.pill::before{content:\"\";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}\n.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}\n.pill.info{background:var(--infobg);color:var(--info)}.pill.grey{background:var(--fill);color:var(--muted)}\n.callout{border-radius:16px;padding:14px 18px;margin:16px 0;font-size:15px;line-height:1.5}\n.callout.ok{background:var(--okbg);color:#0f5132}.callout.warn{background:var(--warnbg);color:#5c3a00}\n.callout.bad{background:var(--badbg);color:#7a1a12}.callout.info{background:var(--infobg);color:#173f5f}\ntable.kv{width:100%;border-collapse:collapse;margin:10px 0}\ntable.kv td{padding:11px 4px;border-bottom:1px solid var(--line);vertical-align:top;font-size:15px}\ntable.kv tr:last-child td{border-bottom:0}\ntable.kv td:first-child{color:var(--muted);width:36%}\ntable.list{width:100%;border-collapse:collapse;margin:10px 0}\ntable.list th{font-size:12.5px;color:var(--muted);text-align:left;font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line)}\ntable.list td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14.5px}\n.num{text-align:right;font-variant-numeric:tabular-nums}\n.chk{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}\n.chk:last-child{border-bottom:0}\n.chk .i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700}\n.chk.ok .i{background:var(--okbg);color:var(--ok)}.chk.warn .i{background:var(--warnbg);color:var(--warn)}.chk.high .i{background:var(--bad);color:#fff}\n.chk b{display:block;font-size:15px;font-weight:600}.chk span{color:var(--ink2);font-size:14.5px}\n.qcard{display:block;border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;text-decoration:none;color:inherit;background:#fff;transition:border-color .15s,box-shadow .15s}\n.qcard:hover{border-color:var(--line2);box-shadow:var(--shadow)}.qcard .t{display:flex;justify-content:space-between;gap:10px;font-weight:650}.qcard .r{margin-top:6px;font-size:14px;color:var(--ink2)}\n.stack>form{border-top:1px solid var(--line);padding-top:10px;margin-top:20px}\n.stack h3{font-weight:650;font-size:17px;letter-spacing:-.01em;margin:14px 0 2px}\ndetails summary{cursor:pointer}\n.sheet h1{font-size:30px}\n.sheet table.list td,.sheet table.list th{padding:9px 8px}\n.foot{text-align:center;color:var(--muted);font-size:12.5px;margin:12px 16px 40px}\n@media(max-width:560px){.card{margin:0;border-radius:0;border-left:0;border-right:0;padding:26px 18px;box-shadow:none}.btn{display:flex;width:100%}.btn.inline{display:inline-flex;width:auto}h1{font-size:27px}}\n@media print{.top,.foot,.noprint{display:none!important}body{background:#fff}.card{border:0;margin:0;max-width:none;padding:0;box-shadow:none}}\n`;\n\n// A clean, mobile-friendly page for approvers, suppliers, contractors and the certifier.\nconst page = (title, body, opts = {}) => {\n  const cfg = configFrom();\n  return `<!doctype html><html lang=\"en-NZ\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>${FONT_LINK}<style>${THEME}</style></head><body>\n<header class=\"top\"><b>${BRAND_MARK}${esc(cfg.business_name || 'Tussock Ridge Farming Ltd')}</b><span>${esc(opts.tag || 'Secure link')}</span></header>\n<main class=\"card${opts.wide ? ' wide' : ''}\">${body}</main>\n<div class=\"foot\">Demo by Forrof. All people, businesses and numbers are fictional.</div></body></html>`;\n};\n\n\n// POST /webhook/register/upload (multipart): store the document and the new expiry date, and ask the admin to verify.\n// The register keeps the old expiry date until a person verifies the upload.\n// Returns { updates, messages, audit, html, savePath } and passes the uploaded file on as binary \"data\".\nconst cfg = configFrom();\nconst hook = $('Person uploads renewal').first();\nconst form = hook.json.body || {};\nconst token = String(form.t || '');\nconst r = tableRows('Register').find((x) => token && x.upload_token === token);\nconst bin = hook.binary || {};\nconst fileKey = Object.keys(bin)[0];\nconst file = fileKey ? bin[fileKey] : null;\nconst none = { updates: [], messages: [], audit: [], savePath: '' };\nconst fail = (title, text) => [{ json: { ...none, html: page(title, `<h1>${esc(title)}</h1>${callout('warn', esc(text))}`) } }];\n\nif (!r) return fail('Upload link not valid', `Please contact ${cfg.admin_name} for a new link.`);\nif (!file) return fail('No file received', 'Please choose a file and try again.');\nif (!['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/webp'].includes(file.mimeType)) return fail('File type not accepted', 'Please upload a photo (JPG or PNG) or a PDF.');\nconst expiry = String(form.expiry || '');\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(expiry)) return fail('Expiry date needed', 'Please enter the new expiry date shown on the document.');\nif (expiry <= nzToday()) return fail('That date has passed', 'The new expiry date must be in the future. Check the date on the document.');\n\nconst ext = (file.fileName || '').split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '') || (file.mimeType === 'application/pdf' ? 'pdf' : 'jpg');\nconst storedName = `${r.reg_id}-${r.type.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)}-${Date.now()}.${ext}`;\nconst original = String(file.fileName || '').slice(0, 120);\nconst admin = person(cfg, 'admin');\nreturn [{ json: {\n  updates: [{ id: r.id, status: 'received', new_expiry: expiry, file_name: storedName, original_name: original, received_at: nowIso(), note: '' }],\n  messages: [msg({ channel: 'Email', to_name: admin.name, to_address: admin.email, link: `${cfg.base_url}/webhook/console?tab=gate`, related: r.reg_id, workflow: 'Certificate uploaded',\n    subject: `Please verify: ${r.responsible_name} uploaded ${r.type}`,\n    body: `${r.responsible_name} uploaded their ${r.type.toLowerCase()} with a new expiry date of ${fmtDate(expiry)}. Check it against the document, then mark it verified or send it back. The register keeps the old date until you do.` })],\n  audit: [auditRow(r.responsible_name, 'person', 'Consents', `${r.type}, ${r.responsible_name}`, 'Uploaded a renewal', `${original}, new expiry ${fmtDate(expiry)}. Waiting for ${admin.name} to verify.`)],\n  html: page('Uploaded', `<h1>Thanks, ${esc(firstName(r.responsible_name))}</h1>${callout('ok', `<b>Your ${esc(r.type.toLowerCase())} is uploaded securely.</b> ${esc(admin.name)} will check it. We'll message you only if something is wrong.`)}`),\n  savePath: `register/${storedName}`,\n}, binary: { data: file } }];\n"
+      },
+      "id": "e90e5a94-7ea8-4536-a6cc-77b802d584a5"
+    },
+    {
+      "name": "File accepted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        1000
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "20d66a90-545a-41b7-ae30-6e1b9a469e68",
+              "leftValue": "={{ String($json.savePath ?? '') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b44dfe63-8cfd-4902-a1ba-1dfc4f1d1709"
+    },
+    {
+      "name": "Store document",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        800,
+        1000
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "=D:/Software Development/automations/n8n/agri-nz/files/{{ $json.savePath }}",
+        "dataPropertyName": "data",
+        "options": {}
+      },
+      "id": "734aeb09-04bd-4d41-ad12-7b59097702ad"
+    },
+    {
+      "name": "Received",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        1000
+      ],
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "c6d84baa-41c3-4589-a799-d7c58eee3349"
+    },
+    {
+      "name": "Mark received",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        1000
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Register"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "62310ae3-4572-4997-ac30-17d5d0f3452a"
+    },
+    {
+      "name": "Verify request",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        1140
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "1ca8bc27-de28-46d7-abe0-65f0d4483b92"
+    },
+    {
+      "name": "Ask the admin to verify",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        1140
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "agriSendMessage1"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "c6012bfc-079e-4139-a019-f208a04649cb"
+    },
+    {
+      "name": "Upload audit",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        1280
+      ],
+      "parameters": {
+        "fieldToSplitOut": "audit",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "9663b806-8f3b-4298-a114-9be69667fa0d"
+    },
+    {
+      "name": "Log the upload",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        1280
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Audit log"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "04aedb57-e5bc-4375-ae6d-2d7b4e8a2569"
+    },
+    {
+      "name": "Show upload result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        1420
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f44fe35c-ace8-4df0-a309-4b930d23e95e"
+    },
+    {
+      "name": "Lane: verify",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        1600
+      ],
+      "parameters": {
+        "content": "### Admin verifies or sends back (console button)\nVerified: the register takes the new expiry date and the reminders stop. Sent back: the person gets the reason and a fresh link.",
+        "width": 1320,
+        "height": 640,
+        "color": 7
+      },
+      "id": "883bd2fe-4aa6-447b-ad58-04a69f3ccb8b"
+    },
+    {
+      "name": "Admin verifies",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1680
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "register/verify",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "c21d085a-6095-4e37-a293-a6a61d6d4f9c",
+      "id": "570711b0-b51e-4959-a8e3-53602017d0e8"
+    },
+    {
+      "name": "Load data (verify)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        1680
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "agriLoadData0001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "ee7a0bcd-ee82-4a3f-ab1b-360bca7804bd"
+    },
+    {
+      "name": "Verify or send back",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1680
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst TZ = 'Pacific/Auckland';\nconst DAY_MS = 86400000;\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst round2 = (n) => Math.round(Number((Number(n || 0) * 100).toFixed(6))) / 100;\nconst money = (n) => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD' }).format(Number(n || 0));\nconst priceText = (n) => '$' + Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 4 });\nconst qtyText = (n) => Number(n || 0).toLocaleString('en-NZ', { maximumFractionDigits: 2 });\nconst unitText = (qty, unit) => (Number(qty) !== 1 && { load: 'loads', bale: 'bales' }[unit]) || unit;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\n// Each call is one millisecond later than the last, so rows written in one run keep their order.\nlet _seq = 0;\nconst nowIso = () => new Date(Date.now() + _seq++).toISOString();\n\n// Calendar dates are plain \"YYYY-MM-DD\" strings in New Zealand time, so this PC's own clock never matters.\nconst nzToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());\nconst dateOf = (s) => new Date(`${String(s).slice(0, 10)}T00:00:00Z`);\nconst isoDay = (d) => d.toISOString().slice(0, 10);\nconst addDays = (s, n) => isoDay(new Date(dateOf(s).getTime() + n * DAY_MS));\nconst addMonths = (s, n) => {\n  const d = dateOf(s);\n  const day = d.getUTCDate();\n  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));\n  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();\n  target.setUTCDate(Math.min(day, last));\n  return isoDay(target);\n};\nconst daysBetween = (from, to) => Math.round((dateOf(to) - dateOf(from)) / DAY_MS);\nconst fmtDate = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) : '—');\nconst fmtLong = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—');\nconst fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('en-NZ', { timeZone: TZ, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '');\nconst ago = (iso) => {\n  if (!iso) return '';\n  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));\n  if (s < 60) return 'just now';\n  if (s < 3600) return `${Math.round(s / 60)} min ago`;\n  if (s < 86400) return `${Math.round(s / 3600)} h ago`;\n  return `${Math.round(s / 86400)} d ago`;\n};\n\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst firstName = (name) => String(name || '').split(' ')[0];\nconst person = (cfg, role) => ({ name: cfg[`${role}_name`] || '', email: cfg[`${role}_email`] || '', phone: cfg[`${role}_phone`] || '' });\n\n// A message for the Shared · Send message workflow. Nothing is sent from anywhere else.\nconst msg = (m) => ({\n  channel: m.channel, to_name: m.to_name || '', to_address: m.to_address || '', subject: m.subject || '',\n  body: m.body || '', link: m.link || '', related: m.related || '', workflow: m.workflow || '',\n});\n// Text the phone if we have one, otherwise email. `both` sends the email as well.\nconst reach = (p, m, how = 'auto') => {\n  const out = [];\n  const to = { to_name: p.name, related: m.related, workflow: m.workflow };\n  if (p.phone && how !== 'email') out.push(msg({ ...to, channel: 'SMS', to_address: p.phone, body: m.sms || m.body, link: m.link }));\n  if (p.email && (how === 'email' || how === 'both' || !p.phone)) out.push(msg({ ...to, channel: 'Email', to_address: p.email, subject: m.subject, body: m.body, link: m.link }));\n  return out;\n};\n// One line of the audit trail: who did what, to what, and when.\nconst auditRow = (actor, type, flow, subject, action, detail = '') => ({\n  at: nowIso(), actor, actor_type: type, flow, subject: String(subject).slice(0, 200), action: String(action).slice(0, 200), detail: String(detail).slice(0, 700),\n});\n// The page a webhook link returns after a person acts: back to the console, on the same tab, with a notice.\nconst backToConsole = (cfg, tab, notice) => `${cfg.base_url}/webhook/console?tab=${encodeURIComponent(tab || 'gate')}&done=${encodeURIComponent(notice)}`;\n\nconst pill = (tone, text) => `<span class=\"pill ${tone}\">${esc(text)}</span>`;\nconst callout = (tone, html) => `<div class=\"callout ${tone}\">${html}</div>`;\n\n// One type family (Figtree, from Google Fonts) with the system font as the fallback when offline.\nconst FONT_LINK = '<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap\">';\n// The business's mark: three tussock blades on dark teal.\nconst BRAND_MARK = '<svg class=\"mark\" width=\"34\" height=\"34\" viewBox=\"0 0 34 34\" aria-hidden=\"true\"><rect width=\"34\" height=\"34\" rx=\"10\" fill=\"#0e3a35\"/><g fill=\"none\" stroke=\"#d6f04a\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M17 26V10\"/><path d=\"M17 26c-.8-5.6-3.8-9-8.5-11\"/><path d=\"M17 26c.8-5.6 3.8-9 8.5-11\"/></g></svg>';\n\nconst THEME = `\n:root{--bg:#f6f4ee;--paper:#fff;--ink:#0f1f1b;--ink2:#34433f;--muted:#6b7672;--line:#e8e5dc;--line2:#d9d5c9;--fill:#efece4;\n--teal:#0e3a35;--teal2:#1d5c53;--teal3:#2f7a6e;--lime:#d6f04a;\n--ok:#18794e;--okbg:#e5f3ea;--warn:#8f5600;--warnbg:#fbf0d6;--bad:#b42318;--badbg:#fdeceb;--info:#1f5f8b;--infobg:#e7f0f8;\n--font:\"Figtree\",-apple-system,BlinkMacSystemFont,\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,sans-serif;\n--shadow:0 1px 2px rgba(15,31,27,.04),0 10px 30px -14px rgba(15,31,27,.14)}\n*{box-sizing:border-box}\nhtml{-webkit-text-size-adjust:100%}\nbody{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}\n.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}\n.top b{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.01em}\n.top b .mark{width:28px;height:28px}\n.top span{font-size:12.5px;font-weight:600;color:var(--teal2);background:#e6efeb;border-radius:999px;padding:4px 12px;white-space:nowrap}\n.card{max-width:640px;margin:36px auto;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:36px;box-shadow:var(--shadow)}\n.card.wide{max-width:900px}\nh1{font-weight:650;font-size:32px;line-height:1.12;letter-spacing:-.03em;margin:0 0 10px}\nh2{font-weight:650;font-size:19px;line-height:1.3;letter-spacing:-.015em;margin:30px 0 10px}\np{margin:6px 0 14px;color:var(--ink2)}.muted{color:var(--muted);font-size:14px}\na{color:var(--teal2);text-underline-offset:3px}\nlabel{display:block;font-weight:600;font-size:14px;margin:18px 0 6px}\ninput,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;font:inherit;font-size:15.5px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}\ninput[type=file]{padding:10px 12px;background:var(--bg)}\ninput[type=checkbox]{accent-color:var(--teal2)}\ntextarea{min-height:110px;resize:vertical}\ninput:focus,select:focus,textarea:focus{outline:0;border-color:var(--teal3);box-shadow:0 0 0 4px rgba(47,122,110,.16)}\n.btn:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(47,122,110,.4);outline-offset:2px}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--teal);color:#fff;border:1px solid transparent;border-radius:999px;padding:0 24px;min-height:50px;font:600 15.5px var(--font);cursor:pointer;text-decoration:none;margin-top:18px;text-align:center;transition:background .15s,transform .08s}\n.btn:hover{background:#0a2925}.btn:active{transform:scale(.98)}\n.btn.go{background:var(--ok)}.btn.go:hover{background:#12623e}\n.btn.line{background:#fff;color:var(--ink);border-color:var(--line2)}.btn.line:hover{background:var(--fill)}\n.btn.stop{background:#fff;color:var(--bad);border-color:#efc3be}.btn.stop:hover{background:var(--badbg)}\n.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1.45;white-space:nowrap;vertical-align:1px}\n.pill::before{content:\"\";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}\n.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}\n.pill.info{background:var(--infobg);color:var(--info)}.pill.grey{background:var(--fill);color:var(--muted)}\n.callout{border-radius:16px;padding:14px 18px;margin:16px 0;font-size:15px;line-height:1.5}\n.callout.ok{background:var(--okbg);color:#0f5132}.callout.warn{background:var(--warnbg);color:#5c3a00}\n.callout.bad{background:var(--badbg);color:#7a1a12}.callout.info{background:var(--infobg);color:#173f5f}\ntable.kv{width:100%;border-collapse:collapse;margin:10px 0}\ntable.kv td{padding:11px 4px;border-bottom:1px solid var(--line);vertical-align:top;font-size:15px}\ntable.kv tr:last-child td{border-bottom:0}\ntable.kv td:first-child{color:var(--muted);width:36%}\ntable.list{width:100%;border-collapse:collapse;margin:10px 0}\ntable.list th{font-size:12.5px;color:var(--muted);text-align:left;font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line)}\ntable.list td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14.5px}\n.num{text-align:right;font-variant-numeric:tabular-nums}\n.chk{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}\n.chk:last-child{border-bottom:0}\n.chk .i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700}\n.chk.ok .i{background:var(--okbg);color:var(--ok)}.chk.warn .i{background:var(--warnbg);color:var(--warn)}.chk.high .i{background:var(--bad);color:#fff}\n.chk b{display:block;font-size:15px;font-weight:600}.chk span{color:var(--ink2);font-size:14.5px}\n.qcard{display:block;border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;text-decoration:none;color:inherit;background:#fff;transition:border-color .15s,box-shadow .15s}\n.qcard:hover{border-color:var(--line2);box-shadow:var(--shadow)}.qcard .t{display:flex;justify-content:space-between;gap:10px;font-weight:650}.qcard .r{margin-top:6px;font-size:14px;color:var(--ink2)}\n.stack>form{border-top:1px solid var(--line);padding-top:10px;margin-top:20px}\n.stack h3{font-weight:650;font-size:17px;letter-spacing:-.01em;margin:14px 0 2px}\ndetails summary{cursor:pointer}\n.sheet h1{font-size:30px}\n.sheet table.list td,.sheet table.list th{padding:9px 8px}\n.foot{text-align:center;color:var(--muted);font-size:12.5px;margin:12px 16px 40px}\n@media(max-width:560px){.card{margin:0;border-radius:0;border-left:0;border-right:0;padding:26px 18px;box-shadow:none}.btn{display:flex;width:100%}.btn.inline{display:inline-flex;width:auto}h1{font-size:27px}}\n@media print{.top,.foot,.noprint{display:none!important}body{background:#fff}.card{border:0;margin:0;max-width:none;padding:0;box-shadow:none}}\n`;\n\n// A clean, mobile-friendly page for approvers, suppliers, contractors and the certifier.\nconst page = (title, body, opts = {}) => {\n  const cfg = configFrom();\n  return `<!doctype html><html lang=\"en-NZ\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>${FONT_LINK}<style>${THEME}</style></head><body>\n<header class=\"top\"><b>${BRAND_MARK}${esc(cfg.business_name || 'Tussock Ridge Farming Ltd')}</b><span>${esc(opts.tag || 'Secure link')}</span></header>\n<main class=\"card${opts.wide ? ' wide' : ''}\">${body}</main>\n<div class=\"foot\">Demo by Forrof. All people, businesses and numbers are fictional.</div></body></html>`;\n};\n\n// How the agent reads a consent, certificate or other record that expires. Injected into the nodes that watch or show the register.\n//\n// Consents follow the renewal rule in section 124 of the Resource Management Act: lodge a renewal at least 6 months before\n// expiry and you may keep operating until the council decides; lodge 3 to 6 months before and the council decides whether you\n// may; lodge later and you must stop when the consent expires. The months are settings because the rules are being changed.\n// Certificates, vehicle fitness and insurance use simple 30-day and 7-day warnings.\nconst REG_RANK = { expired: 0, late: 1, urgent: 2, missing: 3, lodge: 4, soon: 5, plan: 6, lodged: 7, ok: 8 };\n// How many days to leave between reminders to the person responsible, by state.\nconst REG_CADENCE = { expired: 7, missing: 7, urgent: 3, soon: 14, late: 3, lodge: 7, plan: 30 };\nconst regNeedsAction = (state) => ['expired', 'late', 'urgent', 'missing', 'lodge', 'soon', 'plan'].includes(state);\n\n// What to tell the person who holds the record. The \"do not assign\" prompt is for the manager, not for them.\nconst selfText = (r, st) => {\n  if (r.kind === 'Consent') return st.detail;\n  const what = r.type.toLowerCase();\n  if (st.state === 'expired') return `Your ${what} expired ${-st.left} day${st.left === -1 ? '' : 's'} ago (${fmtDate(r.expiry_date)}).`;\n  if (st.state === 'missing') return `We have no record of your ${what} on file.`;\n  if (r.expiry_date) return `Your ${what} expires on ${fmtDate(r.expiry_date)} (${st.left} day${st.left === 1 ? '' : 's'}).`;\n  return st.detail;\n};\n\nconst registerState = (r, cfg, today) => {\n  const restriction = r.restriction || '';\n  const stop = restriction ? ` Do not assign ${restriction} until it is sorted.` : '';\n  if (r.status === 'missing' && !r.expiry_date) {\n    return { state: 'missing', tone: 'warn', label: 'No evidence on file', detail: `Nothing on file yet.${stop}`, left: null };\n  }\n  const exp = r.expiry_date;\n  if (!exp) return { state: 'ok', tone: 'ok', label: 'Current', detail: 'No expiry date.', left: null };\n  const left = daysBetween(today, exp);\n  const soonDays = Number(cfg.cert_soon_days || 30);\n  const urgentDays = Number(cfg.cert_urgent_days || 7);\n\n  if (r.kind === 'Consent') {\n    const lodgeBy = addMonths(exp, -Number(cfg.consent_lodge_months || 6));\n    const cutoff = addMonths(exp, -Number(cfg.consent_cutoff_months || 3));\n    const planFrom = addMonths(exp, -Number(cfg.consent_plan_months || 8));\n    if (r.renewal_lodged_at) {\n      const when = String(r.renewal_lodged_at).slice(0, 10);\n      const rule = when <= lodgeBy ? 'at least 6 months before it expires, so you may keep operating until the council decides'\n        : when <= cutoff ? 'between 3 and 6 months before it expires, so keeping on operating is at the council\\'s discretion: get its agreement in writing'\n          : 'less than 3 months before it expires, so you must stop when it expires unless it is decided first';\n      if (left < 0 && when > lodgeBy) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}). The renewal was lodged ${fmtDate(when)}, ${rule}.${stop}`, left };\n      return { state: 'lodged', tone: 'info', label: 'Renewal lodged', detail: `Renewal lodged ${fmtDate(when)}, ${rule}.`, left };\n    }\n    if (left < 0) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}).${stop}`, left };\n    if (today > cutoff) return { state: 'late', tone: 'bad', label: 'Past the cut-off', detail: `Less than ${cfg.consent_cutoff_months || 3} months left and no renewal lodged. Unless it is renewed first, you must stop ${restriction || 'the activity'} when it expires on ${fmtDate(exp)}. Call your consultant today.`, left };\n    if (today > lodgeBy) return { state: 'lodge', tone: 'warn', label: 'Lodge the renewal now', detail: `The ${cfg.consent_lodge_months || 6}-month date (${fmtDate(lodgeBy)}) has passed, so the council now decides whether you may keep operating while it processes a renewal. Lodge by ${fmtDate(cutoff)} at the latest.`, left };\n    if (today >= planFrom) return { state: 'plan', tone: 'warn', label: 'Plan the renewal', detail: `Lodge the renewal by ${fmtDate(lodgeBy)} (${cfg.consent_lodge_months || 6} months before expiry) to keep operating as of right while the council decides.`, left };\n    return { state: 'ok', tone: 'ok', label: 'Current', detail: `Expires ${fmtDate(exp)}. Lodge a renewal by ${fmtDate(lodgeBy)}.`, left };\n  }\n\n  if (left < 0) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}).${stop}`, left };\n  if (left <= urgentDays) return { state: 'urgent', tone: 'bad', label: `Expires in ${left} day${left === 1 ? '' : 's'}`, detail: `Expires ${fmtDate(exp)}.`, left };\n  if (left <= soonDays) return { state: 'soon', tone: 'warn', label: `Expires in ${left} days`, detail: `Expires ${fmtDate(exp)}.`, left };\n  return { state: 'ok', tone: 'ok', label: 'Current', detail: `Expires ${fmtDate(exp)}.`, left };\n};\n\n// POST /webhook/register/verify: the admin marks an uploaded renewal verified (the register takes its new expiry date),\n// or sends it back with a reason. Returns { updates, messages, audit, location }.\nconst cfg = configFrom();\nconst body = $('Admin verifies').first().json.body || {};\nconst tab = String(body.tab || 'consents');\nconst r = tableRows('Register').find((x) => x.reg_id === String(body.id || ''));\nconst none = { updates: [], messages: [], audit: [] };\nconst done = (notice, extra = {}) => [{ json: { ...none, ...extra, location: backToConsole(cfg, tab, notice) } }];\nif (!r || r.status !== 'received') return done('Nothing to check for that record: it is not waiting for verification.');\nconst action = String(body.action || '');\nconst admin = person(cfg, 'admin');\n\nif (action === 'back') {\n  const reason = String(body.reason || '').trim().slice(0, 300);\n  if (reason.length < 5) return done('Say what is wrong, so they know what to fix.');\n  const who = { name: r.responsible_name, email: r.responsible_email, phone: r.responsible_phone };\n  const link = `${cfg.base_url}/webhook/register/upload?t=${r.upload_token}`;\n  return done(`Sent back to ${r.responsible_name}: ${r.type}.`, {\n    updates: [{ id: r.id, status: 'requested', new_expiry: '', file_name: '', original_name: '', received_at: '', note: reason, last_reminder_at: nowIso() }],\n    messages: reach(who, {\n      subject: `Please upload again: ${r.type}`,\n      body: `Kia ora ${firstName(who.name)},\\n\\n${admin.name} checked what you sent for your ${r.type.toLowerCase()} and needs a different one.\\nReason: ${reason}\\n\\nPlease upload it again from the secure link. This message is automated.`,\n      sms: `Kia ora ${firstName(who.name)}, ${admin.name} needs a different file for your ${r.type.toLowerCase()}: ${reason} Upload again here:`,\n      link, related: r.reg_id, workflow: 'Certificate sent back',\n    }),\n    audit: [auditRow(admin.name, 'person', 'Consents', `${r.type}, ${r.responsible_name}`, 'Sent back the upload', `Reason: ${reason}`)],\n  });\n}\nif (action !== 'verify') return done('Choose Mark verified or Send back.');\n\nconst renewed = { ...r, status: 'verified', expiry_date: r.new_expiry || r.expiry_date, renewal_lodged_at: '' };\nconst st = registerState(renewed, cfg, nzToday());\nreturn done(`Verified: ${r.type}, ${r.responsible_name}. It now runs to ${fmtDate(renewed.expiry_date)}.`, {\n  updates: [{ id: r.id, status: 'verified', expiry_date: renewed.expiry_date, new_expiry: '', verified_at: nowIso(), verified_by: admin.name, renewal_lodged_at: '', reminders_sent: 0, last_reminder_at: '', last_state: st.state, note: '' }],\n  audit: [auditRow(admin.name, 'person', 'Consents', `${r.type}, ${r.responsible_name}`, 'Verified the renewal', `New expiry ${fmtDate(renewed.expiry_date)} (was ${fmtDate(r.expiry_date)}). The register is up to date and reminders stop.`)],\n});\n"
+      },
+      "id": "3d2a0616-6288-4511-a282-16f4c06e95e1"
+    },
+    {
+      "name": "Verify decision",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        1680
+      ],
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "8d22a5ac-0754-46fc-a11e-b6092bee293f"
+    },
+    {
+      "name": "Save the record",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        1680
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Register"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "828d4cd6-deec-44f1-a51f-600998d400ef"
+    },
+    {
+      "name": "Verify messages",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        1820
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "6a0913db-3d53-4cfd-abdc-11235243b92e"
+    },
+    {
+      "name": "Send the messages",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        1820
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "agriSendMessage1"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "8c565ce6-2697-47e2-a99f-2566f9d501e7"
+    },
+    {
+      "name": "Verify audit",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        1960
+      ],
+      "parameters": {
+        "fieldToSplitOut": "audit",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "cd28beed-4598-4357-a0d8-c632bc0e8790"
+    },
+    {
+      "name": "Log the verification",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        1960
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Audit log"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f59a8899-6af0-4dc7-a38d-5b88f564a0da"
+    },
+    {
+      "name": "Back to the console",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        2100
+      ],
+      "parameters": {
+        "respondWith": "redirect",
+        "redirectURL": "={{ $json.location }}",
+        "options": {
+          "responseCode": 303
+        }
+      },
+      "id": "526ce11c-0b9f-4913-aa8a-953af5507ea6"
+    },
+    {
+      "name": "Lane: lodged",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        2280
+      ],
+      "parameters": {
+        "content": "### Owner records that a consent renewal was lodged (console button)\nThe agent then explains what that means for operating while the council decides: as of right, at the council's discretion, or not at all.",
+        "width": 1320,
+        "height": 500,
+        "color": 7
+      },
+      "id": "6034c094-d29b-4649-ae6c-040960961828"
+    },
+    {
+      "name": "Owner records lodged renewal",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        2360
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "register/lodged",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "1710196f-6c29-438e-a813-f462d646173e",
+      "id": "1ef59980-7332-4829-a4b4-b5a1875c861d"
+    },
+    {
+      "name": "Load data (lodged)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        2360
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "agriLoadData0001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "08073619-6f6e-40eb-ad83-1abd20fb43e9"
+    },
+    {
+      "name": "Record the renewal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        2360
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst TZ = 'Pacific/Auckland';\nconst DAY_MS = 86400000;\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst round2 = (n) => Math.round(Number((Number(n || 0) * 100).toFixed(6))) / 100;\nconst money = (n) => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD' }).format(Number(n || 0));\nconst priceText = (n) => '$' + Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 4 });\nconst qtyText = (n) => Number(n || 0).toLocaleString('en-NZ', { maximumFractionDigits: 2 });\nconst unitText = (qty, unit) => (Number(qty) !== 1 && { load: 'loads', bale: 'bales' }[unit]) || unit;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\n// Each call is one millisecond later than the last, so rows written in one run keep their order.\nlet _seq = 0;\nconst nowIso = () => new Date(Date.now() + _seq++).toISOString();\n\n// Calendar dates are plain \"YYYY-MM-DD\" strings in New Zealand time, so this PC's own clock never matters.\nconst nzToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());\nconst dateOf = (s) => new Date(`${String(s).slice(0, 10)}T00:00:00Z`);\nconst isoDay = (d) => d.toISOString().slice(0, 10);\nconst addDays = (s, n) => isoDay(new Date(dateOf(s).getTime() + n * DAY_MS));\nconst addMonths = (s, n) => {\n  const d = dateOf(s);\n  const day = d.getUTCDate();\n  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));\n  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();\n  target.setUTCDate(Math.min(day, last));\n  return isoDay(target);\n};\nconst daysBetween = (from, to) => Math.round((dateOf(to) - dateOf(from)) / DAY_MS);\nconst fmtDate = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) : '—');\nconst fmtLong = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—');\nconst fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('en-NZ', { timeZone: TZ, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '');\nconst ago = (iso) => {\n  if (!iso) return '';\n  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));\n  if (s < 60) return 'just now';\n  if (s < 3600) return `${Math.round(s / 60)} min ago`;\n  if (s < 86400) return `${Math.round(s / 3600)} h ago`;\n  return `${Math.round(s / 86400)} d ago`;\n};\n\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst firstName = (name) => String(name || '').split(' ')[0];\nconst person = (cfg, role) => ({ name: cfg[`${role}_name`] || '', email: cfg[`${role}_email`] || '', phone: cfg[`${role}_phone`] || '' });\n\n// A message for the Shared · Send message workflow. Nothing is sent from anywhere else.\nconst msg = (m) => ({\n  channel: m.channel, to_name: m.to_name || '', to_address: m.to_address || '', subject: m.subject || '',\n  body: m.body || '', link: m.link || '', related: m.related || '', workflow: m.workflow || '',\n});\n// Text the phone if we have one, otherwise email. `both` sends the email as well.\nconst reach = (p, m, how = 'auto') => {\n  const out = [];\n  const to = { to_name: p.name, related: m.related, workflow: m.workflow };\n  if (p.phone && how !== 'email') out.push(msg({ ...to, channel: 'SMS', to_address: p.phone, body: m.sms || m.body, link: m.link }));\n  if (p.email && (how === 'email' || how === 'both' || !p.phone)) out.push(msg({ ...to, channel: 'Email', to_address: p.email, subject: m.subject, body: m.body, link: m.link }));\n  return out;\n};\n// One line of the audit trail: who did what, to what, and when.\nconst auditRow = (actor, type, flow, subject, action, detail = '') => ({\n  at: nowIso(), actor, actor_type: type, flow, subject: String(subject).slice(0, 200), action: String(action).slice(0, 200), detail: String(detail).slice(0, 700),\n});\n// The page a webhook link returns after a person acts: back to the console, on the same tab, with a notice.\nconst backToConsole = (cfg, tab, notice) => `${cfg.base_url}/webhook/console?tab=${encodeURIComponent(tab || 'gate')}&done=${encodeURIComponent(notice)}`;\n\nconst pill = (tone, text) => `<span class=\"pill ${tone}\">${esc(text)}</span>`;\nconst callout = (tone, html) => `<div class=\"callout ${tone}\">${html}</div>`;\n\n// One type family (Figtree, from Google Fonts) with the system font as the fallback when offline.\nconst FONT_LINK = '<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap\">';\n// The business's mark: three tussock blades on dark teal.\nconst BRAND_MARK = '<svg class=\"mark\" width=\"34\" height=\"34\" viewBox=\"0 0 34 34\" aria-hidden=\"true\"><rect width=\"34\" height=\"34\" rx=\"10\" fill=\"#0e3a35\"/><g fill=\"none\" stroke=\"#d6f04a\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M17 26V10\"/><path d=\"M17 26c-.8-5.6-3.8-9-8.5-11\"/><path d=\"M17 26c.8-5.6 3.8-9 8.5-11\"/></g></svg>';\n\nconst THEME = `\n:root{--bg:#f6f4ee;--paper:#fff;--ink:#0f1f1b;--ink2:#34433f;--muted:#6b7672;--line:#e8e5dc;--line2:#d9d5c9;--fill:#efece4;\n--teal:#0e3a35;--teal2:#1d5c53;--teal3:#2f7a6e;--lime:#d6f04a;\n--ok:#18794e;--okbg:#e5f3ea;--warn:#8f5600;--warnbg:#fbf0d6;--bad:#b42318;--badbg:#fdeceb;--info:#1f5f8b;--infobg:#e7f0f8;\n--font:\"Figtree\",-apple-system,BlinkMacSystemFont,\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,sans-serif;\n--shadow:0 1px 2px rgba(15,31,27,.04),0 10px 30px -14px rgba(15,31,27,.14)}\n*{box-sizing:border-box}\nhtml{-webkit-text-size-adjust:100%}\nbody{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}\n.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}\n.top b{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.01em}\n.top b .mark{width:28px;height:28px}\n.top span{font-size:12.5px;font-weight:600;color:var(--teal2);background:#e6efeb;border-radius:999px;padding:4px 12px;white-space:nowrap}\n.card{max-width:640px;margin:36px auto;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:36px;box-shadow:var(--shadow)}\n.card.wide{max-width:900px}\nh1{font-weight:650;font-size:32px;line-height:1.12;letter-spacing:-.03em;margin:0 0 10px}\nh2{font-weight:650;font-size:19px;line-height:1.3;letter-spacing:-.015em;margin:30px 0 10px}\np{margin:6px 0 14px;color:var(--ink2)}.muted{color:var(--muted);font-size:14px}\na{color:var(--teal2);text-underline-offset:3px}\nlabel{display:block;font-weight:600;font-size:14px;margin:18px 0 6px}\ninput,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;font:inherit;font-size:15.5px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}\ninput[type=file]{padding:10px 12px;background:var(--bg)}\ninput[type=checkbox]{accent-color:var(--teal2)}\ntextarea{min-height:110px;resize:vertical}\ninput:focus,select:focus,textarea:focus{outline:0;border-color:var(--teal3);box-shadow:0 0 0 4px rgba(47,122,110,.16)}\n.btn:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(47,122,110,.4);outline-offset:2px}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--teal);color:#fff;border:1px solid transparent;border-radius:999px;padding:0 24px;min-height:50px;font:600 15.5px var(--font);cursor:pointer;text-decoration:none;margin-top:18px;text-align:center;transition:background .15s,transform .08s}\n.btn:hover{background:#0a2925}.btn:active{transform:scale(.98)}\n.btn.go{background:var(--ok)}.btn.go:hover{background:#12623e}\n.btn.line{background:#fff;color:var(--ink);border-color:var(--line2)}.btn.line:hover{background:var(--fill)}\n.btn.stop{background:#fff;color:var(--bad);border-color:#efc3be}.btn.stop:hover{background:var(--badbg)}\n.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1.45;white-space:nowrap;vertical-align:1px}\n.pill::before{content:\"\";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}\n.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}\n.pill.info{background:var(--infobg);color:var(--info)}.pill.grey{background:var(--fill);color:var(--muted)}\n.callout{border-radius:16px;padding:14px 18px;margin:16px 0;font-size:15px;line-height:1.5}\n.callout.ok{background:var(--okbg);color:#0f5132}.callout.warn{background:var(--warnbg);color:#5c3a00}\n.callout.bad{background:var(--badbg);color:#7a1a12}.callout.info{background:var(--infobg);color:#173f5f}\ntable.kv{width:100%;border-collapse:collapse;margin:10px 0}\ntable.kv td{padding:11px 4px;border-bottom:1px solid var(--line);vertical-align:top;font-size:15px}\ntable.kv tr:last-child td{border-bottom:0}\ntable.kv td:first-child{color:var(--muted);width:36%}\ntable.list{width:100%;border-collapse:collapse;margin:10px 0}\ntable.list th{font-size:12.5px;color:var(--muted);text-align:left;font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line)}\ntable.list td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14.5px}\n.num{text-align:right;font-variant-numeric:tabular-nums}\n.chk{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}\n.chk:last-child{border-bottom:0}\n.chk .i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700}\n.chk.ok .i{background:var(--okbg);color:var(--ok)}.chk.warn .i{background:var(--warnbg);color:var(--warn)}.chk.high .i{background:var(--bad);color:#fff}\n.chk b{display:block;font-size:15px;font-weight:600}.chk span{color:var(--ink2);font-size:14.5px}\n.qcard{display:block;border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;text-decoration:none;color:inherit;background:#fff;transition:border-color .15s,box-shadow .15s}\n.qcard:hover{border-color:var(--line2);box-shadow:var(--shadow)}.qcard .t{display:flex;justify-content:space-between;gap:10px;font-weight:650}.qcard .r{margin-top:6px;font-size:14px;color:var(--ink2)}\n.stack>form{border-top:1px solid var(--line);padding-top:10px;margin-top:20px}\n.stack h3{font-weight:650;font-size:17px;letter-spacing:-.01em;margin:14px 0 2px}\ndetails summary{cursor:pointer}\n.sheet h1{font-size:30px}\n.sheet table.list td,.sheet table.list th{padding:9px 8px}\n.foot{text-align:center;color:var(--muted);font-size:12.5px;margin:12px 16px 40px}\n@media(max-width:560px){.card{margin:0;border-radius:0;border-left:0;border-right:0;padding:26px 18px;box-shadow:none}.btn{display:flex;width:100%}.btn.inline{display:inline-flex;width:auto}h1{font-size:27px}}\n@media print{.top,.foot,.noprint{display:none!important}body{background:#fff}.card{border:0;margin:0;max-width:none;padding:0;box-shadow:none}}\n`;\n\n// A clean, mobile-friendly page for approvers, suppliers, contractors and the certifier.\nconst page = (title, body, opts = {}) => {\n  const cfg = configFrom();\n  return `<!doctype html><html lang=\"en-NZ\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>${FONT_LINK}<style>${THEME}</style></head><body>\n<header class=\"top\"><b>${BRAND_MARK}${esc(cfg.business_name || 'Tussock Ridge Farming Ltd')}</b><span>${esc(opts.tag || 'Secure link')}</span></header>\n<main class=\"card${opts.wide ? ' wide' : ''}\">${body}</main>\n<div class=\"foot\">Demo by Forrof. All people, businesses and numbers are fictional.</div></body></html>`;\n};\n\n// How the agent reads a consent, certificate or other record that expires. Injected into the nodes that watch or show the register.\n//\n// Consents follow the renewal rule in section 124 of the Resource Management Act: lodge a renewal at least 6 months before\n// expiry and you may keep operating until the council decides; lodge 3 to 6 months before and the council decides whether you\n// may; lodge later and you must stop when the consent expires. The months are settings because the rules are being changed.\n// Certificates, vehicle fitness and insurance use simple 30-day and 7-day warnings.\nconst REG_RANK = { expired: 0, late: 1, urgent: 2, missing: 3, lodge: 4, soon: 5, plan: 6, lodged: 7, ok: 8 };\n// How many days to leave between reminders to the person responsible, by state.\nconst REG_CADENCE = { expired: 7, missing: 7, urgent: 3, soon: 14, late: 3, lodge: 7, plan: 30 };\nconst regNeedsAction = (state) => ['expired', 'late', 'urgent', 'missing', 'lodge', 'soon', 'plan'].includes(state);\n\n// What to tell the person who holds the record. The \"do not assign\" prompt is for the manager, not for them.\nconst selfText = (r, st) => {\n  if (r.kind === 'Consent') return st.detail;\n  const what = r.type.toLowerCase();\n  if (st.state === 'expired') return `Your ${what} expired ${-st.left} day${st.left === -1 ? '' : 's'} ago (${fmtDate(r.expiry_date)}).`;\n  if (st.state === 'missing') return `We have no record of your ${what} on file.`;\n  if (r.expiry_date) return `Your ${what} expires on ${fmtDate(r.expiry_date)} (${st.left} day${st.left === 1 ? '' : 's'}).`;\n  return st.detail;\n};\n\nconst registerState = (r, cfg, today) => {\n  const restriction = r.restriction || '';\n  const stop = restriction ? ` Do not assign ${restriction} until it is sorted.` : '';\n  if (r.status === 'missing' && !r.expiry_date) {\n    return { state: 'missing', tone: 'warn', label: 'No evidence on file', detail: `Nothing on file yet.${stop}`, left: null };\n  }\n  const exp = r.expiry_date;\n  if (!exp) return { state: 'ok', tone: 'ok', label: 'Current', detail: 'No expiry date.', left: null };\n  const left = daysBetween(today, exp);\n  const soonDays = Number(cfg.cert_soon_days || 30);\n  const urgentDays = Number(cfg.cert_urgent_days || 7);\n\n  if (r.kind === 'Consent') {\n    const lodgeBy = addMonths(exp, -Number(cfg.consent_lodge_months || 6));\n    const cutoff = addMonths(exp, -Number(cfg.consent_cutoff_months || 3));\n    const planFrom = addMonths(exp, -Number(cfg.consent_plan_months || 8));\n    if (r.renewal_lodged_at) {\n      const when = String(r.renewal_lodged_at).slice(0, 10);\n      const rule = when <= lodgeBy ? 'at least 6 months before it expires, so you may keep operating until the council decides'\n        : when <= cutoff ? 'between 3 and 6 months before it expires, so keeping on operating is at the council\\'s discretion: get its agreement in writing'\n          : 'less than 3 months before it expires, so you must stop when it expires unless it is decided first';\n      if (left < 0 && when > lodgeBy) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}). The renewal was lodged ${fmtDate(when)}, ${rule}.${stop}`, left };\n      return { state: 'lodged', tone: 'info', label: 'Renewal lodged', detail: `Renewal lodged ${fmtDate(when)}, ${rule}.`, left };\n    }\n    if (left < 0) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}).${stop}`, left };\n    if (today > cutoff) return { state: 'late', tone: 'bad', label: 'Past the cut-off', detail: `Less than ${cfg.consent_cutoff_months || 3} months left and no renewal lodged. Unless it is renewed first, you must stop ${restriction || 'the activity'} when it expires on ${fmtDate(exp)}. Call your consultant today.`, left };\n    if (today > lodgeBy) return { state: 'lodge', tone: 'warn', label: 'Lodge the renewal now', detail: `The ${cfg.consent_lodge_months || 6}-month date (${fmtDate(lodgeBy)}) has passed, so the council now decides whether you may keep operating while it processes a renewal. Lodge by ${fmtDate(cutoff)} at the latest.`, left };\n    if (today >= planFrom) return { state: 'plan', tone: 'warn', label: 'Plan the renewal', detail: `Lodge the renewal by ${fmtDate(lodgeBy)} (${cfg.consent_lodge_months || 6} months before expiry) to keep operating as of right while the council decides.`, left };\n    return { state: 'ok', tone: 'ok', label: 'Current', detail: `Expires ${fmtDate(exp)}. Lodge a renewal by ${fmtDate(lodgeBy)}.`, left };\n  }\n\n  if (left < 0) return { state: 'expired', tone: 'bad', label: 'Expired', detail: `Expired ${-left} days ago (${fmtDate(exp)}).${stop}`, left };\n  if (left <= urgentDays) return { state: 'urgent', tone: 'bad', label: `Expires in ${left} day${left === 1 ? '' : 's'}`, detail: `Expires ${fmtDate(exp)}.`, left };\n  if (left <= soonDays) return { state: 'soon', tone: 'warn', label: `Expires in ${left} days`, detail: `Expires ${fmtDate(exp)}.`, left };\n  return { state: 'ok', tone: 'ok', label: 'Current', detail: `Expires ${fmtDate(exp)}.`, left };\n};\n\n// POST /webhook/register/lodged: a person records that a consent renewal was lodged with the council.\n// The agent then explains what that means for operating while the council decides. Returns { updates, audit, location }.\nconst cfg = configFrom();\nconst body = $('Owner records lodged renewal').first().json.body || {};\nconst tab = String(body.tab || 'consents');\nconst r = tableRows('Register').find((x) => x.reg_id === String(body.id || ''));\nconst none = { updates: [], audit: [] };\nif (!r || r.kind !== 'Consent') return [{ json: { ...none, location: backToConsole(cfg, tab, 'That record is not a consent.') } }];\nif (r.renewal_lodged_at) return [{ json: { ...none, location: backToConsole(cfg, tab, `A renewal was already recorded as lodged on ${fmtDate(String(r.renewal_lodged_at).slice(0, 10))}.`) } }];\nconst when = /^\\d{4}-\\d{2}-\\d{2}$/.test(String(body.date || '')) ? String(body.date) : nzToday();\nconst st = registerState({ ...r, renewal_lodged_at: when }, cfg, nzToday());\nconst owner = person(cfg, 'owner');\nreturn [{ json: {\n  updates: [{ id: r.id, renewal_lodged_at: when, last_state: st.state }],\n  audit: [auditRow(owner.name, 'person', 'Consents', r.type, `Recorded: renewal lodged ${fmtDate(when)}`, st.detail)],\n  location: backToConsole(cfg, tab, `Recorded: ${r.type} renewal lodged ${fmtDate(when)}. ${st.detail}`),\n} }];\n"
+      },
+      "id": "05a12930-e590-41d4-a5eb-506a380c5bdc"
+    },
+    {
+      "name": "Lodged record",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        2360
+      ],
+      "parameters": {
+        "fieldToSplitOut": "updates",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "297071da-020b-45a6-a97d-816ac6addc24"
+    },
+    {
+      "name": "Save lodged date",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        2360
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Register"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "fd7122d5-8dc9-45f8-a2e6-cd6edb85365e"
+    },
+    {
+      "name": "Lodged audit",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        600,
+        2500
+      ],
+      "parameters": {
+        "fieldToSplitOut": "audit",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "4c64bc58-e8a0-40ec-adcb-ee9894af7dcf"
+    },
+    {
+      "name": "Log the lodged renewal",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        2500
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Audit log"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b134a1c3-0e22-4a64-a028-fd1421c75580"
+    },
+    {
+      "name": "Back to the console (lodged)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        2640
+      ],
+      "parameters": {
+        "respondWith": "redirect",
+        "redirectURL": "={{ $json.location }}",
+        "options": {
+          "responseCode": 303
+        }
+      },
+      "id": "98ba93a3-263e-4e5a-a87d-25853863c0e6"
+    },
+    {
+      "name": "Lane: file",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -70,
+        2820
+      ],
+      "parameters": {
+        "content": "### View an uploaded certificate or consent\nOpens the stored photo or PDF.",
+        "width": 1320,
+        "height": 360,
+        "color": 7
+      },
+      "id": "13b84702-3789-4f0a-a357-c899e81fbe5e"
+    },
+    {
+      "name": "View register file",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        2900
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "register/file",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "efb3bd4a-af9c-4d26-a88d-6d41853c9b53",
+      "id": "92875855-10d6-4871-a1c6-f05e228244a0"
+    },
+    {
+      "name": "Load data (file)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        2900
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "agriLoadData0001"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "c00b9f18-8a44-45fc-a8f2-f3d801639cc7"
+    },
+    {
+      "name": "Locate file",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        2900
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst TZ = 'Pacific/Auckland';\nconst DAY_MS = 86400000;\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst round2 = (n) => Math.round(Number((Number(n || 0) * 100).toFixed(6))) / 100;\nconst money = (n) => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD' }).format(Number(n || 0));\nconst priceText = (n) => '$' + Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 4 });\nconst qtyText = (n) => Number(n || 0).toLocaleString('en-NZ', { maximumFractionDigits: 2 });\nconst unitText = (qty, unit) => (Number(qty) !== 1 && { load: 'loads', bale: 'bales' }[unit]) || unit;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\n// Each call is one millisecond later than the last, so rows written in one run keep their order.\nlet _seq = 0;\nconst nowIso = () => new Date(Date.now() + _seq++).toISOString();\n\n// Calendar dates are plain \"YYYY-MM-DD\" strings in New Zealand time, so this PC's own clock never matters.\nconst nzToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());\nconst dateOf = (s) => new Date(`${String(s).slice(0, 10)}T00:00:00Z`);\nconst isoDay = (d) => d.toISOString().slice(0, 10);\nconst addDays = (s, n) => isoDay(new Date(dateOf(s).getTime() + n * DAY_MS));\nconst addMonths = (s, n) => {\n  const d = dateOf(s);\n  const day = d.getUTCDate();\n  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));\n  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();\n  target.setUTCDate(Math.min(day, last));\n  return isoDay(target);\n};\nconst daysBetween = (from, to) => Math.round((dateOf(to) - dateOf(from)) / DAY_MS);\nconst fmtDate = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) : '—');\nconst fmtLong = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—');\nconst fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('en-NZ', { timeZone: TZ, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '');\nconst ago = (iso) => {\n  if (!iso) return '';\n  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));\n  if (s < 60) return 'just now';\n  if (s < 3600) return `${Math.round(s / 60)} min ago`;\n  if (s < 86400) return `${Math.round(s / 3600)} h ago`;\n  return `${Math.round(s / 86400)} d ago`;\n};\n\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst firstName = (name) => String(name || '').split(' ')[0];\nconst person = (cfg, role) => ({ name: cfg[`${role}_name`] || '', email: cfg[`${role}_email`] || '', phone: cfg[`${role}_phone`] || '' });\n\n// A message for the Shared · Send message workflow. Nothing is sent from anywhere else.\nconst msg = (m) => ({\n  channel: m.channel, to_name: m.to_name || '', to_address: m.to_address || '', subject: m.subject || '',\n  body: m.body || '', link: m.link || '', related: m.related || '', workflow: m.workflow || '',\n});\n// Text the phone if we have one, otherwise email. `both` sends the email as well.\nconst reach = (p, m, how = 'auto') => {\n  const out = [];\n  const to = { to_name: p.name, related: m.related, workflow: m.workflow };\n  if (p.phone && how !== 'email') out.push(msg({ ...to, channel: 'SMS', to_address: p.phone, body: m.sms || m.body, link: m.link }));\n  if (p.email && (how === 'email' || how === 'both' || !p.phone)) out.push(msg({ ...to, channel: 'Email', to_address: p.email, subject: m.subject, body: m.body, link: m.link }));\n  return out;\n};\n// One line of the audit trail: who did what, to what, and when.\nconst auditRow = (actor, type, flow, subject, action, detail = '') => ({\n  at: nowIso(), actor, actor_type: type, flow, subject: String(subject).slice(0, 200), action: String(action).slice(0, 200), detail: String(detail).slice(0, 700),\n});\n// The page a webhook link returns after a person acts: back to the console, on the same tab, with a notice.\nconst backToConsole = (cfg, tab, notice) => `${cfg.base_url}/webhook/console?tab=${encodeURIComponent(tab || 'gate')}&done=${encodeURIComponent(notice)}`;\n\nconst pill = (tone, text) => `<span class=\"pill ${tone}\">${esc(text)}</span>`;\nconst callout = (tone, html) => `<div class=\"callout ${tone}\">${html}</div>`;\n\n// One type family (Figtree, from Google Fonts) with the system font as the fallback when offline.\nconst FONT_LINK = '<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap\">';\n// The business's mark: three tussock blades on dark teal.\nconst BRAND_MARK = '<svg class=\"mark\" width=\"34\" height=\"34\" viewBox=\"0 0 34 34\" aria-hidden=\"true\"><rect width=\"34\" height=\"34\" rx=\"10\" fill=\"#0e3a35\"/><g fill=\"none\" stroke=\"#d6f04a\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M17 26V10\"/><path d=\"M17 26c-.8-5.6-3.8-9-8.5-11\"/><path d=\"M17 26c.8-5.6 3.8-9 8.5-11\"/></g></svg>';\n\nconst THEME = `\n:root{--bg:#f6f4ee;--paper:#fff;--ink:#0f1f1b;--ink2:#34433f;--muted:#6b7672;--line:#e8e5dc;--line2:#d9d5c9;--fill:#efece4;\n--teal:#0e3a35;--teal2:#1d5c53;--teal3:#2f7a6e;--lime:#d6f04a;\n--ok:#18794e;--okbg:#e5f3ea;--warn:#8f5600;--warnbg:#fbf0d6;--bad:#b42318;--badbg:#fdeceb;--info:#1f5f8b;--infobg:#e7f0f8;\n--font:\"Figtree\",-apple-system,BlinkMacSystemFont,\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,sans-serif;\n--shadow:0 1px 2px rgba(15,31,27,.04),0 10px 30px -14px rgba(15,31,27,.14)}\n*{box-sizing:border-box}\nhtml{-webkit-text-size-adjust:100%}\nbody{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}\n.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}\n.top b{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.01em}\n.top b .mark{width:28px;height:28px}\n.top span{font-size:12.5px;font-weight:600;color:var(--teal2);background:#e6efeb;border-radius:999px;padding:4px 12px;white-space:nowrap}\n.card{max-width:640px;margin:36px auto;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:36px;box-shadow:var(--shadow)}\n.card.wide{max-width:900px}\nh1{font-weight:650;font-size:32px;line-height:1.12;letter-spacing:-.03em;margin:0 0 10px}\nh2{font-weight:650;font-size:19px;line-height:1.3;letter-spacing:-.015em;margin:30px 0 10px}\np{margin:6px 0 14px;color:var(--ink2)}.muted{color:var(--muted);font-size:14px}\na{color:var(--teal2);text-underline-offset:3px}\nlabel{display:block;font-weight:600;font-size:14px;margin:18px 0 6px}\ninput,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;font:inherit;font-size:15.5px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}\ninput[type=file]{padding:10px 12px;background:var(--bg)}\ninput[type=checkbox]{accent-color:var(--teal2)}\ntextarea{min-height:110px;resize:vertical}\ninput:focus,select:focus,textarea:focus{outline:0;border-color:var(--teal3);box-shadow:0 0 0 4px rgba(47,122,110,.16)}\n.btn:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(47,122,110,.4);outline-offset:2px}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--teal);color:#fff;border:1px solid transparent;border-radius:999px;padding:0 24px;min-height:50px;font:600 15.5px var(--font);cursor:pointer;text-decoration:none;margin-top:18px;text-align:center;transition:background .15s,transform .08s}\n.btn:hover{background:#0a2925}.btn:active{transform:scale(.98)}\n.btn.go{background:var(--ok)}.btn.go:hover{background:#12623e}\n.btn.line{background:#fff;color:var(--ink);border-color:var(--line2)}.btn.line:hover{background:var(--fill)}\n.btn.stop{background:#fff;color:var(--bad);border-color:#efc3be}.btn.stop:hover{background:var(--badbg)}\n.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1.45;white-space:nowrap;vertical-align:1px}\n.pill::before{content:\"\";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}\n.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}\n.pill.info{background:var(--infobg);color:var(--info)}.pill.grey{background:var(--fill);color:var(--muted)}\n.callout{border-radius:16px;padding:14px 18px;margin:16px 0;font-size:15px;line-height:1.5}\n.callout.ok{background:var(--okbg);color:#0f5132}.callout.warn{background:var(--warnbg);color:#5c3a00}\n.callout.bad{background:var(--badbg);color:#7a1a12}.callout.info{background:var(--infobg);color:#173f5f}\ntable.kv{width:100%;border-collapse:collapse;margin:10px 0}\ntable.kv td{padding:11px 4px;border-bottom:1px solid var(--line);vertical-align:top;font-size:15px}\ntable.kv tr:last-child td{border-bottom:0}\ntable.kv td:first-child{color:var(--muted);width:36%}\ntable.list{width:100%;border-collapse:collapse;margin:10px 0}\ntable.list th{font-size:12.5px;color:var(--muted);text-align:left;font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line)}\ntable.list td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14.5px}\n.num{text-align:right;font-variant-numeric:tabular-nums}\n.chk{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}\n.chk:last-child{border-bottom:0}\n.chk .i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700}\n.chk.ok .i{background:var(--okbg);color:var(--ok)}.chk.warn .i{background:var(--warnbg);color:var(--warn)}.chk.high .i{background:var(--bad);color:#fff}\n.chk b{display:block;font-size:15px;font-weight:600}.chk span{color:var(--ink2);font-size:14.5px}\n.qcard{display:block;border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;text-decoration:none;color:inherit;background:#fff;transition:border-color .15s,box-shadow .15s}\n.qcard:hover{border-color:var(--line2);box-shadow:var(--shadow)}.qcard .t{display:flex;justify-content:space-between;gap:10px;font-weight:650}.qcard .r{margin-top:6px;font-size:14px;color:var(--ink2)}\n.stack>form{border-top:1px solid var(--line);padding-top:10px;margin-top:20px}\n.stack h3{font-weight:650;font-size:17px;letter-spacing:-.01em;margin:14px 0 2px}\ndetails summary{cursor:pointer}\n.sheet h1{font-size:30px}\n.sheet table.list td,.sheet table.list th{padding:9px 8px}\n.foot{text-align:center;color:var(--muted);font-size:12.5px;margin:12px 16px 40px}\n@media(max-width:560px){.card{margin:0;border-radius:0;border-left:0;border-right:0;padding:26px 18px;box-shadow:none}.btn{display:flex;width:100%}.btn.inline{display:inline-flex;width:auto}h1{font-size:27px}}\n@media print{.top,.foot,.noprint{display:none!important}body{background:#fff}.card{border:0;margin:0;max-width:none;padding:0;box-shadow:none}}\n`;\n\n// A clean, mobile-friendly page for approvers, suppliers, contractors and the certifier.\nconst page = (title, body, opts = {}) => {\n  const cfg = configFrom();\n  return `<!doctype html><html lang=\"en-NZ\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>${FONT_LINK}<style>${THEME}</style></head><body>\n<header class=\"top\"><b>${BRAND_MARK}${esc(cfg.business_name || 'Tussock Ridge Farming Ltd')}</b><span>${esc(opts.tag || 'Secure link')}</span></header>\n<main class=\"card${opts.wide ? ' wide' : ''}\">${body}</main>\n<div class=\"foot\">Demo by Forrof. All people, businesses and numbers are fictional.</div></body></html>`;\n};\n\n\n\n// GET /webhook/register/file?t=UPLOAD_TOKEN: view an uploaded certificate or consent.\nconst token = String($('View register file').first().json.query?.t || '');\nconst rec = tableRows('Register').find((r) => token && r.upload_token === token);\nconst ok = !!(rec && rec.file_name && /^[A-Za-z0-9._-]+$/.test(rec.file_name));\nconst html = ok ? '' : page('Not found', '<h1>No file on record</h1><p class=\"muted\">This record has no uploaded file.</p>');\nreturn [{ json: { ok, filePath: ok ? 'register/' + rec.file_name : '', fileName: ok ? rec.file_name : '', html } }];\n"
+      },
+      "id": "43eb00c2-4f9b-4052-a6fa-46ba600577a6"
+    },
+    {
+      "name": "File on record?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        2900
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "35693f7e-823e-47f3-a5f8-b7bdd277e0ce",
+              "leftValue": "={{ String($json.ok ?? '') }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cb55cb89-55ac-4d17-a89d-015f56952514"
+    },
+    {
+      "name": "Read document",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        800,
+        2900
+      ],
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "=D:/Software Development/automations/n8n/agri-nz/files/{{ $json.filePath }}",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "id": "8cc86a14-85f9-41da-a58a-9c63d1881c87"
+    },
+    {
+      "name": "Show file",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        2900
+      ],
+      "parameters": {
+        "respondWith": "binary",
+        "responseDataSource": "automatically",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Disposition",
+                "value": "=inline; filename=\"{{ $json.fileName.split('/').pop() }}\""
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f2f66abc-f1b0-4ae0-a232-ff28ab66af6c"
+    },
+    {
+      "name": "No file page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        3040
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "16ef33cb-850b-4ada-ab02-b8c93d276d7a"
+    }
+  ],
+  "connections": {
+    "Every day 07:00": {
+      "main": [
+        [
+          {
+            "node": "Load data (watch)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (watch)": {
+      "main": [
+        [
+          {
+            "node": "Watch the register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run from console": {
+      "main": [
+        [
+          {
+            "node": "Load data (watch)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Watch the register": {
+      "main": [
+        [
+          {
+            "node": "Reminder log",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reminders and alerts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Watch audit",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Watch result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder log": {
+      "main": [
+        [
+          {
+            "node": "Update register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminders and alerts": {
+      "main": [
+        [
+          {
+            "node": "Send reminders and alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Watch audit": {
+      "main": [
+        [
+          {
+            "node": "Log the watch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Person opens upload link": {
+      "main": [
+        [
+          {
+            "node": "Load data (form)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (form)": {
+      "main": [
+        [
+          {
+            "node": "Render upload page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render upload page": {
+      "main": [
+        [
+          {
+            "node": "Show upload page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Person uploads renewal": {
+      "main": [
+        [
+          {
+            "node": "Load data (upload)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (upload)": {
+      "main": [
+        [
+          {
+            "node": "Save upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save upload": {
+      "main": [
+        [
+          {
+            "node": "File accepted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File accepted?": {
+      "main": [
+        [
+          {
+            "node": "Store document",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show upload result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store document": {
+      "main": [
+        [
+          {
+            "node": "Received",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Verify request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload audit",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Show upload result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Received": {
+      "main": [
+        [
+          {
+            "node": "Mark received",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify request": {
+      "main": [
+        [
+          {
+            "node": "Ask the admin to verify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload audit": {
+      "main": [
+        [
+          {
+            "node": "Log the upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin verifies": {
+      "main": [
+        [
+          {
+            "node": "Load data (verify)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (verify)": {
+      "main": [
+        [
+          {
+            "node": "Verify or send back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify or send back": {
+      "main": [
+        [
+          {
+            "node": "Verify decision",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Verify messages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Verify audit",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Back to the console",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify decision": {
+      "main": [
+        [
+          {
+            "node": "Save the record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify messages": {
+      "main": [
+        [
+          {
+            "node": "Send the messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify audit": {
+      "main": [
+        [
+          {
+            "node": "Log the verification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Owner records lodged renewal": {
+      "main": [
+        [
+          {
+            "node": "Load data (lodged)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (lodged)": {
+      "main": [
+        [
+          {
+            "node": "Record the renewal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record the renewal": {
+      "main": [
+        [
+          {
+            "node": "Lodged record",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Lodged audit",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Back to the console (lodged)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lodged record": {
+      "main": [
+        [
+          {
+            "node": "Save lodged date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lodged audit": {
+      "main": [
+        [
+          {
+            "node": "Log the lodged renewal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "View register file": {
+      "main": [
+        [
+          {
+            "node": "Load data (file)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load data (file)": {
+      "main": [
+        [
+          {
+            "node": "Locate file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Locate file": {
+      "main": [
+        [
+          {
+            "node": "File on record?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File on record?": {
+      "main": [
+        [
+          {
+            "node": "Read document",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No file page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read document": {
+      "main": [
+        [
+          {
+            "node": "Show file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Pacific/Auckland",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Watches every consent, certificate, vehicle check and insurance date, reminds the person responsible on a tightening schedule, flags what not to assign, and lets a person verify each renewal."
+  },
+  "tags": []
+}

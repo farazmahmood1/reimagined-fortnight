@@ -1,0 +1,2079 @@
+{
+  "id": "agriResetDemo001",
+  "name": "Demo · Reset data",
+  "nodes": [
+    {
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        60
+      ],
+      "parameters": {
+        "content": "## Demo · Reset data\nCreates the data tables (first run), clears them and loads the fictional Tussock Ridge Farming data: nine invoices to check, farm plan evidence partly collected, and consents running out. Every date is worked out from today, New Zealand time.",
+        "width": 680,
+        "height": 160,
+        "color": 5
+      },
+      "id": "b0bff23a-2444-4282-ab70-a4187c16cf89"
+    },
+    {
+      "name": "When called by a workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "8f6e325b-e15c-4abf-a3e6-41b26190b18b"
+    },
+    {
+      "name": "Run manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        480
+      ],
+      "parameters": {},
+      "id": "765f3a0d-add8-4783-a395-0e262795de7d"
+    },
+    {
+      "name": "Create Config",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Config",
+        "columns": {
+          "column": [
+            {
+              "name": "key",
+              "type": "string"
+            },
+            {
+              "name": "value",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "977987c7-abcf-483e-af51-e7f4043c308b"
+    },
+    {
+      "name": "Create Suppliers",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Suppliers",
+        "columns": {
+          "column": [
+            {
+              "name": "supplier_id",
+              "type": "string"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "category",
+              "type": "string"
+            },
+            {
+              "name": "contact_name",
+              "type": "string"
+            },
+            {
+              "name": "contact_email",
+              "type": "string"
+            },
+            {
+              "name": "contact_phone",
+              "type": "string"
+            },
+            {
+              "name": "bank_account",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "ff03c3f8-dbfa-440e-a19e-c5dd0285e14a"
+    },
+    {
+      "name": "Create Contracts",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        580,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Contracts",
+        "columns": {
+          "column": [
+            {
+              "name": "contract_id",
+              "type": "string"
+            },
+            {
+              "name": "supplier_id",
+              "type": "string"
+            },
+            {
+              "name": "item",
+              "type": "string"
+            },
+            {
+              "name": "description",
+              "type": "string"
+            },
+            {
+              "name": "unit",
+              "type": "string"
+            },
+            {
+              "name": "agreed_price",
+              "type": "number"
+            },
+            {
+              "name": "qty_agreed",
+              "type": "number"
+            },
+            {
+              "name": "valid_from",
+              "type": "string"
+            },
+            {
+              "name": "valid_to",
+              "type": "string"
+            },
+            {
+              "name": "needs_docket",
+              "type": "string"
+            },
+            {
+              "name": "tolerance_pct",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "152c9f38-7f76-4ee6-a1fc-c81b07cddeea"
+    },
+    {
+      "name": "Create Dockets",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Dockets",
+        "columns": {
+          "column": [
+            {
+              "name": "docket_ref",
+              "type": "string"
+            },
+            {
+              "name": "supplier_id",
+              "type": "string"
+            },
+            {
+              "name": "item",
+              "type": "string"
+            },
+            {
+              "name": "qty",
+              "type": "number"
+            },
+            {
+              "name": "unit",
+              "type": "string"
+            },
+            {
+              "name": "delivered_on",
+              "type": "string"
+            },
+            {
+              "name": "received_by",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "fededaeb-6b69-4536-a87f-ccc188c8674d"
+    },
+    {
+      "name": "Create Invoices",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        940,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Invoices",
+        "columns": {
+          "column": [
+            {
+              "name": "invoice_id",
+              "type": "string"
+            },
+            {
+              "name": "supplier_id",
+              "type": "string"
+            },
+            {
+              "name": "supplier_ref",
+              "type": "string"
+            },
+            {
+              "name": "invoice_date",
+              "type": "string"
+            },
+            {
+              "name": "due_date",
+              "type": "string"
+            },
+            {
+              "name": "item",
+              "type": "string"
+            },
+            {
+              "name": "description",
+              "type": "string"
+            },
+            {
+              "name": "qty",
+              "type": "number"
+            },
+            {
+              "name": "unit",
+              "type": "string"
+            },
+            {
+              "name": "unit_price",
+              "type": "number"
+            },
+            {
+              "name": "net",
+              "type": "number"
+            },
+            {
+              "name": "gst",
+              "type": "number"
+            },
+            {
+              "name": "total",
+              "type": "number"
+            },
+            {
+              "name": "bank_account",
+              "type": "string"
+            },
+            {
+              "name": "docket_ref",
+              "type": "string"
+            },
+            {
+              "name": "source",
+              "type": "string"
+            },
+            {
+              "name": "received_at",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "contract_id",
+              "type": "string"
+            },
+            {
+              "name": "result",
+              "type": "string"
+            },
+            {
+              "name": "reasons",
+              "type": "string"
+            },
+            {
+              "name": "at_risk",
+              "type": "number"
+            },
+            {
+              "name": "checked_at",
+              "type": "string"
+            },
+            {
+              "name": "approver_role",
+              "type": "string"
+            },
+            {
+              "name": "approver_name",
+              "type": "string"
+            },
+            {
+              "name": "review_token",
+              "type": "string"
+            },
+            {
+              "name": "approval_requested_at",
+              "type": "string"
+            },
+            {
+              "name": "decision",
+              "type": "string"
+            },
+            {
+              "name": "decided_at",
+              "type": "string"
+            },
+            {
+              "name": "decided_by",
+              "type": "string"
+            },
+            {
+              "name": "decision_note",
+              "type": "string"
+            },
+            {
+              "name": "payment_file",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "f58aaeb6-b427-40d4-a57d-a84c0aa94e47"
+    },
+    {
+      "name": "Create Payment runs",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Payment runs",
+        "columns": {
+          "column": [
+            {
+              "name": "file_name",
+              "type": "string"
+            },
+            {
+              "name": "pay_date",
+              "type": "string"
+            },
+            {
+              "name": "invoices",
+              "type": "number"
+            },
+            {
+              "name": "total",
+              "type": "number"
+            },
+            {
+              "name": "created_at",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "c5bf7efd-e7b0-4695-a455-ba2b1a8eef04"
+    },
+    {
+      "name": "Create Farms",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Farms",
+        "columns": {
+          "column": [
+            {
+              "name": "farm_id",
+              "type": "string"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "farm_type",
+              "type": "string"
+            },
+            {
+              "name": "location",
+              "type": "string"
+            },
+            {
+              "name": "region",
+              "type": "string"
+            },
+            {
+              "name": "area_ha",
+              "type": "number"
+            },
+            {
+              "name": "manager_name",
+              "type": "string"
+            },
+            {
+              "name": "manager_email",
+              "type": "string"
+            },
+            {
+              "name": "manager_phone",
+              "type": "string"
+            },
+            {
+              "name": "pack_status",
+              "type": "string"
+            },
+            {
+              "name": "pack_token",
+              "type": "string"
+            },
+            {
+              "name": "signoff_token",
+              "type": "string"
+            },
+            {
+              "name": "ready_at",
+              "type": "string"
+            },
+            {
+              "name": "signed_by",
+              "type": "string"
+            },
+            {
+              "name": "signed_at",
+              "type": "string"
+            },
+            {
+              "name": "sent_at",
+              "type": "string"
+            },
+            {
+              "name": "sent_to",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "e7c4d4c5-7269-4736-af66-31cbe23b2ffd"
+    },
+    {
+      "name": "Create Requirements",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1480,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Requirements",
+        "columns": {
+          "column": [
+            {
+              "name": "req_id",
+              "type": "string"
+            },
+            {
+              "name": "requirement",
+              "type": "string"
+            },
+            {
+              "name": "category",
+              "type": "string"
+            },
+            {
+              "name": "applies_to",
+              "type": "string"
+            },
+            {
+              "name": "provider_name",
+              "type": "string"
+            },
+            {
+              "name": "provider_email",
+              "type": "string"
+            },
+            {
+              "name": "provider_phone",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "d6fca5cb-f044-4579-acb1-7fd8807277e5"
+    },
+    {
+      "name": "Create Evidence",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1660,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Evidence",
+        "columns": {
+          "column": [
+            {
+              "name": "item_id",
+              "type": "string"
+            },
+            {
+              "name": "farm_id",
+              "type": "string"
+            },
+            {
+              "name": "req_id",
+              "type": "string"
+            },
+            {
+              "name": "requirement",
+              "type": "string"
+            },
+            {
+              "name": "category",
+              "type": "string"
+            },
+            {
+              "name": "provider_name",
+              "type": "string"
+            },
+            {
+              "name": "provider_email",
+              "type": "string"
+            },
+            {
+              "name": "provider_phone",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "upload_token",
+              "type": "string"
+            },
+            {
+              "name": "file_name",
+              "type": "string"
+            },
+            {
+              "name": "original_name",
+              "type": "string"
+            },
+            {
+              "name": "received_at",
+              "type": "string"
+            },
+            {
+              "name": "verified_at",
+              "type": "string"
+            },
+            {
+              "name": "verified_by",
+              "type": "string"
+            },
+            {
+              "name": "requests_sent",
+              "type": "number"
+            },
+            {
+              "name": "last_request_at",
+              "type": "string"
+            },
+            {
+              "name": "note",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "8cc9f5c2-e69c-4e87-ae79-f4ced562872c"
+    },
+    {
+      "name": "Create Register",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1840,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Register",
+        "columns": {
+          "column": [
+            {
+              "name": "reg_id",
+              "type": "string"
+            },
+            {
+              "name": "farm_id",
+              "type": "string"
+            },
+            {
+              "name": "kind",
+              "type": "string"
+            },
+            {
+              "name": "type",
+              "type": "string"
+            },
+            {
+              "name": "reference",
+              "type": "string"
+            },
+            {
+              "name": "holder",
+              "type": "string"
+            },
+            {
+              "name": "responsible_name",
+              "type": "string"
+            },
+            {
+              "name": "responsible_email",
+              "type": "string"
+            },
+            {
+              "name": "responsible_phone",
+              "type": "string"
+            },
+            {
+              "name": "restriction",
+              "type": "string"
+            },
+            {
+              "name": "expiry_date",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "new_expiry",
+              "type": "string"
+            },
+            {
+              "name": "upload_token",
+              "type": "string"
+            },
+            {
+              "name": "file_name",
+              "type": "string"
+            },
+            {
+              "name": "original_name",
+              "type": "string"
+            },
+            {
+              "name": "received_at",
+              "type": "string"
+            },
+            {
+              "name": "verified_at",
+              "type": "string"
+            },
+            {
+              "name": "verified_by",
+              "type": "string"
+            },
+            {
+              "name": "reminders_sent",
+              "type": "number"
+            },
+            {
+              "name": "last_reminder_at",
+              "type": "string"
+            },
+            {
+              "name": "renewal_lodged_at",
+              "type": "string"
+            },
+            {
+              "name": "last_state",
+              "type": "string"
+            },
+            {
+              "name": "note",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "9ff26f0b-fb63-41d1-a816-9951455b3f20"
+    },
+    {
+      "name": "Create Outbox",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2020,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Outbox",
+        "columns": {
+          "column": [
+            {
+              "name": "created_at",
+              "type": "string"
+            },
+            {
+              "name": "channel",
+              "type": "string"
+            },
+            {
+              "name": "to_name",
+              "type": "string"
+            },
+            {
+              "name": "to_address",
+              "type": "string"
+            },
+            {
+              "name": "subject",
+              "type": "string"
+            },
+            {
+              "name": "body",
+              "type": "string"
+            },
+            {
+              "name": "link",
+              "type": "string"
+            },
+            {
+              "name": "related",
+              "type": "string"
+            },
+            {
+              "name": "workflow",
+              "type": "string"
+            },
+            {
+              "name": "delivery",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "2875ba5e-e2ff-40dd-a256-c1ed5a28cb90"
+    },
+    {
+      "name": "Create Audit log",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        300
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "Audit log",
+        "columns": {
+          "column": [
+            {
+              "name": "at",
+              "type": "string"
+            },
+            {
+              "name": "actor",
+              "type": "string"
+            },
+            {
+              "name": "actor_type",
+              "type": "string"
+            },
+            {
+              "name": "flow",
+              "type": "string"
+            },
+            {
+              "name": "subject",
+              "type": "string"
+            },
+            {
+              "name": "action",
+              "type": "string"
+            },
+            {
+              "name": "detail",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "executeOnce": true,
+      "id": "ba0098b6-4794-4ab2-ad43-a17af720b39d"
+    },
+    {
+      "name": "Clear Config",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Config"
+        }
+      },
+      "executeOnce": true,
+      "id": "4965a4e3-1231-40c0-aec6-4b4dc9159579"
+    },
+    {
+      "name": "Clear Suppliers",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        400,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Suppliers"
+        }
+      },
+      "executeOnce": true,
+      "id": "74fa0cba-2529-468c-a474-20686b857412"
+    },
+    {
+      "name": "Clear Contracts",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        580,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Contracts"
+        }
+      },
+      "executeOnce": true,
+      "id": "e721f875-ceeb-4f94-a584-6ba294e0dce3"
+    },
+    {
+      "name": "Clear Dockets",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Dockets"
+        }
+      },
+      "executeOnce": true,
+      "id": "70879093-a67c-4b8b-a29e-f669d3e3517f"
+    },
+    {
+      "name": "Clear Invoices",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        940,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Invoices"
+        }
+      },
+      "executeOnce": true,
+      "id": "df44dc23-1f25-4c19-a525-c458e36fb7ee"
+    },
+    {
+      "name": "Clear Payment runs",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Payment runs"
+        }
+      },
+      "executeOnce": true,
+      "id": "95e8ff77-8e49-4103-aafa-b8663e7d48aa"
+    },
+    {
+      "name": "Clear Farms",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1300,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Farms"
+        }
+      },
+      "executeOnce": true,
+      "id": "feb2f39c-f23c-4180-a4da-9a78a3d26cea"
+    },
+    {
+      "name": "Clear Requirements",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1480,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Requirements"
+        }
+      },
+      "executeOnce": true,
+      "id": "455147db-216a-48be-ad46-4f5ab8c30eb2"
+    },
+    {
+      "name": "Clear Evidence",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1660,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Evidence"
+        }
+      },
+      "executeOnce": true,
+      "id": "489e3a54-a8a9-49cc-ac10-36843f18853e"
+    },
+    {
+      "name": "Clear Register",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1840,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Register"
+        }
+      },
+      "executeOnce": true,
+      "id": "4c7c5656-da68-4b3c-a876-f273fb2d46a1"
+    },
+    {
+      "name": "Clear Outbox",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2020,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        }
+      },
+      "executeOnce": true,
+      "id": "6997c495-593e-4319-aa4a-f6551836dd48"
+    },
+    {
+      "name": "Clear Audit log",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        520
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "clear",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Audit log"
+        }
+      },
+      "executeOnce": true,
+      "id": "fc6b7967-5d32-46f9-a576-ac832ad37f01"
+    },
+    {
+      "name": "Build demo data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2380,
+        520
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst TZ = 'Pacific/Auckland';\nconst DAY_MS = 86400000;\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst round2 = (n) => Math.round(Number((Number(n || 0) * 100).toFixed(6))) / 100;\nconst money = (n) => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD' }).format(Number(n || 0));\nconst priceText = (n) => '$' + Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 4 });\nconst qtyText = (n) => Number(n || 0).toLocaleString('en-NZ', { maximumFractionDigits: 2 });\nconst unitText = (qty, unit) => (Number(qty) !== 1 && { load: 'loads', bale: 'bales' }[unit]) || unit;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\n// Each call is one millisecond later than the last, so rows written in one run keep their order.\nlet _seq = 0;\nconst nowIso = () => new Date(Date.now() + _seq++).toISOString();\n\n// Calendar dates are plain \"YYYY-MM-DD\" strings in New Zealand time, so this PC's own clock never matters.\nconst nzToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());\nconst dateOf = (s) => new Date(`${String(s).slice(0, 10)}T00:00:00Z`);\nconst isoDay = (d) => d.toISOString().slice(0, 10);\nconst addDays = (s, n) => isoDay(new Date(dateOf(s).getTime() + n * DAY_MS));\nconst addMonths = (s, n) => {\n  const d = dateOf(s);\n  const day = d.getUTCDate();\n  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));\n  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();\n  target.setUTCDate(Math.min(day, last));\n  return isoDay(target);\n};\nconst daysBetween = (from, to) => Math.round((dateOf(to) - dateOf(from)) / DAY_MS);\nconst fmtDate = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) : '—');\nconst fmtLong = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—');\nconst fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('en-NZ', { timeZone: TZ, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '');\nconst ago = (iso) => {\n  if (!iso) return '';\n  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));\n  if (s < 60) return 'just now';\n  if (s < 3600) return `${Math.round(s / 60)} min ago`;\n  if (s < 86400) return `${Math.round(s / 3600)} h ago`;\n  return `${Math.round(s / 86400)} d ago`;\n};\n\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst firstName = (name) => String(name || '').split(' ')[0];\nconst person = (cfg, role) => ({ name: cfg[`${role}_name`] || '', email: cfg[`${role}_email`] || '', phone: cfg[`${role}_phone`] || '' });\n\n// A message for the Shared · Send message workflow. Nothing is sent from anywhere else.\nconst msg = (m) => ({\n  channel: m.channel, to_name: m.to_name || '', to_address: m.to_address || '', subject: m.subject || '',\n  body: m.body || '', link: m.link || '', related: m.related || '', workflow: m.workflow || '',\n});\n// Text the phone if we have one, otherwise email. `both` sends the email as well.\nconst reach = (p, m, how = 'auto') => {\n  const out = [];\n  const to = { to_name: p.name, related: m.related, workflow: m.workflow };\n  if (p.phone && how !== 'email') out.push(msg({ ...to, channel: 'SMS', to_address: p.phone, body: m.sms || m.body, link: m.link }));\n  if (p.email && (how === 'email' || how === 'both' || !p.phone)) out.push(msg({ ...to, channel: 'Email', to_address: p.email, subject: m.subject, body: m.body, link: m.link }));\n  return out;\n};\n// One line of the audit trail: who did what, to what, and when.\nconst auditRow = (actor, type, flow, subject, action, detail = '') => ({\n  at: nowIso(), actor, actor_type: type, flow, subject: String(subject).slice(0, 200), action: String(action).slice(0, 200), detail: String(detail).slice(0, 700),\n});\n// The page a webhook link returns after a person acts: back to the console, on the same tab, with a notice.\nconst backToConsole = (cfg, tab, notice) => `${cfg.base_url}/webhook/console?tab=${encodeURIComponent(tab || 'gate')}&done=${encodeURIComponent(notice)}`;\n\nconst pill = (tone, text) => `<span class=\"pill ${tone}\">${esc(text)}</span>`;\nconst callout = (tone, html) => `<div class=\"callout ${tone}\">${html}</div>`;\n\n// One type family (Figtree, from Google Fonts) with the system font as the fallback when offline.\nconst FONT_LINK = '<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap\">';\n// The business's mark: three tussock blades on dark teal.\nconst BRAND_MARK = '<svg class=\"mark\" width=\"34\" height=\"34\" viewBox=\"0 0 34 34\" aria-hidden=\"true\"><rect width=\"34\" height=\"34\" rx=\"10\" fill=\"#0e3a35\"/><g fill=\"none\" stroke=\"#d6f04a\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M17 26V10\"/><path d=\"M17 26c-.8-5.6-3.8-9-8.5-11\"/><path d=\"M17 26c.8-5.6 3.8-9 8.5-11\"/></g></svg>';\n\nconst THEME = `\n:root{--bg:#f6f4ee;--paper:#fff;--ink:#0f1f1b;--ink2:#34433f;--muted:#6b7672;--line:#e8e5dc;--line2:#d9d5c9;--fill:#efece4;\n--teal:#0e3a35;--teal2:#1d5c53;--teal3:#2f7a6e;--lime:#d6f04a;\n--ok:#18794e;--okbg:#e5f3ea;--warn:#8f5600;--warnbg:#fbf0d6;--bad:#b42318;--badbg:#fdeceb;--info:#1f5f8b;--infobg:#e7f0f8;\n--font:\"Figtree\",-apple-system,BlinkMacSystemFont,\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,sans-serif;\n--shadow:0 1px 2px rgba(15,31,27,.04),0 10px 30px -14px rgba(15,31,27,.14)}\n*{box-sizing:border-box}\nhtml{-webkit-text-size-adjust:100%}\nbody{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}\n.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}\n.top b{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.01em}\n.top b .mark{width:28px;height:28px}\n.top span{font-size:12.5px;font-weight:600;color:var(--teal2);background:#e6efeb;border-radius:999px;padding:4px 12px;white-space:nowrap}\n.card{max-width:640px;margin:36px auto;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:36px;box-shadow:var(--shadow)}\n.card.wide{max-width:900px}\nh1{font-weight:650;font-size:32px;line-height:1.12;letter-spacing:-.03em;margin:0 0 10px}\nh2{font-weight:650;font-size:19px;line-height:1.3;letter-spacing:-.015em;margin:30px 0 10px}\np{margin:6px 0 14px;color:var(--ink2)}.muted{color:var(--muted);font-size:14px}\na{color:var(--teal2);text-underline-offset:3px}\nlabel{display:block;font-weight:600;font-size:14px;margin:18px 0 6px}\ninput,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;font:inherit;font-size:15.5px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}\ninput[type=file]{padding:10px 12px;background:var(--bg)}\ninput[type=checkbox]{accent-color:var(--teal2)}\ntextarea{min-height:110px;resize:vertical}\ninput:focus,select:focus,textarea:focus{outline:0;border-color:var(--teal3);box-shadow:0 0 0 4px rgba(47,122,110,.16)}\n.btn:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(47,122,110,.4);outline-offset:2px}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--teal);color:#fff;border:1px solid transparent;border-radius:999px;padding:0 24px;min-height:50px;font:600 15.5px var(--font);cursor:pointer;text-decoration:none;margin-top:18px;text-align:center;transition:background .15s,transform .08s}\n.btn:hover{background:#0a2925}.btn:active{transform:scale(.98)}\n.btn.go{background:var(--ok)}.btn.go:hover{background:#12623e}\n.btn.line{background:#fff;color:var(--ink);border-color:var(--line2)}.btn.line:hover{background:var(--fill)}\n.btn.stop{background:#fff;color:var(--bad);border-color:#efc3be}.btn.stop:hover{background:var(--badbg)}\n.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1.45;white-space:nowrap;vertical-align:1px}\n.pill::before{content:\"\";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}\n.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}\n.pill.info{background:var(--infobg);color:var(--info)}.pill.grey{background:var(--fill);color:var(--muted)}\n.callout{border-radius:16px;padding:14px 18px;margin:16px 0;font-size:15px;line-height:1.5}\n.callout.ok{background:var(--okbg);color:#0f5132}.callout.warn{background:var(--warnbg);color:#5c3a00}\n.callout.bad{background:var(--badbg);color:#7a1a12}.callout.info{background:var(--infobg);color:#173f5f}\ntable.kv{width:100%;border-collapse:collapse;margin:10px 0}\ntable.kv td{padding:11px 4px;border-bottom:1px solid var(--line);vertical-align:top;font-size:15px}\ntable.kv tr:last-child td{border-bottom:0}\ntable.kv td:first-child{color:var(--muted);width:36%}\ntable.list{width:100%;border-collapse:collapse;margin:10px 0}\ntable.list th{font-size:12.5px;color:var(--muted);text-align:left;font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line)}\ntable.list td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14.5px}\n.num{text-align:right;font-variant-numeric:tabular-nums}\n.chk{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}\n.chk:last-child{border-bottom:0}\n.chk .i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700}\n.chk.ok .i{background:var(--okbg);color:var(--ok)}.chk.warn .i{background:var(--warnbg);color:var(--warn)}.chk.high .i{background:var(--bad);color:#fff}\n.chk b{display:block;font-size:15px;font-weight:600}.chk span{color:var(--ink2);font-size:14.5px}\n.qcard{display:block;border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;text-decoration:none;color:inherit;background:#fff;transition:border-color .15s,box-shadow .15s}\n.qcard:hover{border-color:var(--line2);box-shadow:var(--shadow)}.qcard .t{display:flex;justify-content:space-between;gap:10px;font-weight:650}.qcard .r{margin-top:6px;font-size:14px;color:var(--ink2)}\n.stack>form{border-top:1px solid var(--line);padding-top:10px;margin-top:20px}\n.stack h3{font-weight:650;font-size:17px;letter-spacing:-.01em;margin:14px 0 2px}\ndetails summary{cursor:pointer}\n.sheet h1{font-size:30px}\n.sheet table.list td,.sheet table.list th{padding:9px 8px}\n.foot{text-align:center;color:var(--muted);font-size:12.5px;margin:12px 16px 40px}\n@media(max-width:560px){.card{margin:0;border-radius:0;border-left:0;border-right:0;padding:26px 18px;box-shadow:none}.btn{display:flex;width:100%}.btn.inline{display:inline-flex;width:auto}h1{font-size:27px}}\n@media print{.top,.foot,.noprint{display:none!important}body{background:#fff}.card{border:0;margin:0;max-width:none;padding:0;box-shadow:none}}\n`;\n\n// A clean, mobile-friendly page for approvers, suppliers, contractors and the certifier.\nconst page = (title, body, opts = {}) => {\n  const cfg = configFrom();\n  return `<!doctype html><html lang=\"en-NZ\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>${FONT_LINK}<style>${THEME}</style></head><body>\n<header class=\"top\"><b>${BRAND_MARK}${esc(cfg.business_name || 'Tussock Ridge Farming Ltd')}</b><span>${esc(opts.tag || 'Secure link')}</span></header>\n<main class=\"card${opts.wide ? ' wide' : ''}\">${body}</main>\n<div class=\"foot\">Demo by Forrof. All people, businesses and numbers are fictional.</div></body></html>`;\n};\n\nconst DEMO_DATA = {\"CONFIG\":[{\"key\":\"business_name\",\"value\":\"Tussock Ridge Farming Ltd\"},{\"key\":\"region\",\"value\":\"Southland\"},{\"key\":\"base_url\",\"value\":\"http://localhost:5680\"},{\"key\":\"owner_name\",\"value\":\"Hamish Gordon\"},{\"key\":\"owner_email\",\"value\":\"hamish.gordon@tussockridge.example\"},{\"key\":\"owner_phone\",\"value\":\"+64210000101\"},{\"key\":\"admin_name\",\"value\":\"Aroha Tipene\"},{\"key\":\"admin_email\",\"value\":\"aroha.tipene@tussockridge.example\"},{\"key\":\"admin_phone\",\"value\":\"+64210000102\"},{\"key\":\"manager_name\",\"value\":\"Callum Reid\"},{\"key\":\"manager_email\",\"value\":\"callum.reid@tussockridge.example\"},{\"key\":\"manager_phone\",\"value\":\"+64210000103\"},{\"key\":\"certifier_name\",\"value\":\"Rowan Pike\"},{\"key\":\"certifier_email\",\"value\":\"rowan.pike@southerncertifiers.example\"},{\"key\":\"gst_rate\",\"value\":\"0.15\"},{\"key\":\"manager_limit\",\"value\":\"2500\"},{\"key\":\"price_tolerance_pct\",\"value\":\"2\"},{\"key\":\"pay_day\",\"value\":\"20\"},{\"key\":\"plan_deadline\",\"value\":\"2027-11-27\"},{\"key\":\"plan_deadline_note\",\"value\":\"Southland: the due date for certified freshwater farm plans moved from 27 May 2026 to 27 November 2027 (Ministry for the Environment, May 2026). Rules are still changing, so this date is a setting.\"},{\"key\":\"reminder_days\",\"value\":\"7\"},{\"key\":\"max_requests\",\"value\":\"3\"},{\"key\":\"consent_plan_months\",\"value\":\"8\"},{\"key\":\"consent_lodge_months\",\"value\":\"6\"},{\"key\":\"consent_cutoff_months\",\"value\":\"3\"},{\"key\":\"cert_soon_days\",\"value\":\"30\"},{\"key\":\"cert_urgent_days\",\"value\":\"7\"},{\"key\":\"sms_enabled\",\"value\":\"false\"},{\"key\":\"email_enabled\",\"value\":\"false\"}],\"SUPPLIERS\":[{\"supplier_id\":\"S01\",\"name\":\"Aparima Fertiliser Ltd\",\"category\":\"Fertiliser\",\"contact_name\":\"Josh Henare\",\"contact_email\":\"accounts@aparima-fert.example\",\"contact_phone\":\"+64210000108\",\"bank_account\":\"03-0198-0456721-00\"},{\"supplier_id\":\"S02\",\"name\":\"Fiordland Stockfeeds Ltd\",\"category\":\"Feed\",\"contact_name\":\"Maree Dunbar\",\"contact_email\":\"accounts@fiordlandfeeds.example\",\"contact_phone\":\"\",\"bank_account\":\"02-0412-0087634-00\"},{\"supplier_id\":\"S03\",\"name\":\"Invercargill Fuel Services Ltd\",\"category\":\"Fuel\",\"contact_name\":\"Dale Hutchins\",\"contact_email\":\"accounts@ivcfuel.example\",\"contact_phone\":\"\",\"bank_account\":\"06-0813-0245190-00\"},{\"supplier_id\":\"S04\",\"name\":\"Riverton Rural Vets Ltd\",\"category\":\"Veterinary\",\"contact_name\":\"Kate Sorensen\",\"contact_email\":\"accounts@rivertonvets.example\",\"contact_phone\":\"\",\"bank_account\":\"12-3150-0098712-00\"},{\"supplier_id\":\"S05\",\"name\":\"Mataura Stock Cartage Ltd\",\"category\":\"Transport\",\"contact_name\":\"Wiremu Carr\",\"contact_email\":\"office@mataurastockcartage.example\",\"contact_phone\":\"\",\"bank_account\":\"01-1307-0176528-00\"},{\"supplier_id\":\"S06\",\"name\":\"Waiau Contracting Ltd\",\"category\":\"Contractor\",\"contact_name\":\"Brent Maxwell\",\"contact_email\":\"accounts@waiaucontracting.example\",\"contact_phone\":\"\",\"bank_account\":\"03-1599-0321876-00\"},{\"supplier_id\":\"S07\",\"name\":\"Southern Seed & Grain Ltd\",\"category\":\"Seed\",\"contact_name\":\"Lucy Fraser\",\"contact_email\":\"accounts@southernseed.example\",\"contact_phone\":\"\",\"bank_account\":\"38-9004-0123456-00\"}],\"CONTRACTS\":[{\"contract_id\":\"K01\",\"supplier_id\":\"S01\",\"item\":\"Urea (46% N)\",\"description\":\"Urea 46% N, bulk and spread-ready, this season\",\"unit\":\"t\",\"agreed_price\":890,\"qty_agreed\":120,\"needs_docket\":\"yes\"},{\"contract_id\":\"K02\",\"supplier_id\":\"S01\",\"item\":\"Lime\",\"description\":\"Ag lime, spread on farm\",\"unit\":\"t\",\"agreed_price\":62,\"qty_agreed\":400,\"needs_docket\":\"yes\"},{\"contract_id\":\"K03\",\"supplier_id\":\"S02\",\"item\":\"PKE\",\"description\":\"Palm kernel expeller, bulk delivered\",\"unit\":\"t\",\"agreed_price\":395,\"qty_agreed\":300,\"needs_docket\":\"yes\"},{\"contract_id\":\"K04\",\"supplier_id\":\"S03\",\"item\":\"Diesel\",\"description\":\"Farm diesel, bulk tank fill\",\"unit\":\"L\",\"agreed_price\":1.78,\"qty_agreed\":24000,\"needs_docket\":\"yes\"},{\"contract_id\":\"K05\",\"supplier_id\":\"S04\",\"item\":\"Vet consult\",\"description\":\"Herd health consults, hourly rate\",\"unit\":\"h\",\"agreed_price\":168,\"qty_agreed\":120,\"needs_docket\":\"no\"},{\"contract_id\":\"K06\",\"supplier_id\":\"S05\",\"item\":\"Stock cartage\",\"description\":\"Stock cartage, truck and trailer load\",\"unit\":\"load\",\"agreed_price\":540,\"qty_agreed\":60,\"needs_docket\":\"no\"},{\"contract_id\":\"K07\",\"supplier_id\":\"S06\",\"item\":\"Baleage wrapping\",\"description\":\"Baleage wrapping and stacking\",\"unit\":\"bale\",\"agreed_price\":24.5,\"qty_agreed\":2400,\"needs_docket\":\"no\"}],\"DOCKETS\":[{\"docket_ref\":\"DK-20318\",\"supplier_id\":\"S01\",\"item\":\"Urea (46% N)\",\"qty\":24,\"unit\":\"t\",\"received_by\":\"Callum Reid\",\"invoice\":\"A\"},{\"docket_ref\":\"DK-20344\",\"supplier_id\":\"S01\",\"item\":\"Urea (46% N)\",\"qty\":18,\"unit\":\"t\",\"received_by\":\"Callum Reid\",\"invoice\":\"B\"},{\"docket_ref\":\"DK-51207\",\"supplier_id\":\"S02\",\"item\":\"PKE\",\"qty\":27.5,\"unit\":\"t\",\"received_by\":\"Callum Reid\",\"invoice\":\"C\"},{\"docket_ref\":\"DK-90234\",\"supplier_id\":\"S03\",\"item\":\"Diesel\",\"qty\":4000,\"unit\":\"L\",\"received_by\":\"Callum Reid\",\"invoice\":\"D\"},{\"docket_ref\":\"DK-20361\",\"supplier_id\":\"S01\",\"item\":\"Lime\",\"qty\":150,\"unit\":\"t\",\"received_by\":\"Fiona McLeod\",\"invoice\":\"M\"},{\"docket_ref\":\"DK-90118\",\"supplier_id\":\"S03\",\"item\":\"Diesel\",\"qty\":3500,\"unit\":\"L\",\"received_by\":\"Callum Reid\",\"invoice\":\"H1\"},{\"docket_ref\":\"DK-4471\",\"supplier_id\":\"S01\",\"item\":\"Urea (46% N)\",\"qty\":40,\"unit\":\"t\",\"received_by\":\"Callum Reid\",\"invoice\":\"H3\"},{\"docket_ref\":\"DK-51102\",\"supplier_id\":\"S02\",\"item\":\"PKE\",\"qty\":50,\"unit\":\"t\",\"received_by\":\"Callum Reid\",\"invoice\":\"H4\"},{\"docket_ref\":\"DK-20400\",\"supplier_id\":\"S01\",\"item\":\"Urea (46% N)\",\"qty\":20,\"unit\":\"t\",\"received_by\":\"Callum Reid\",\"days_ago\":3},{\"docket_ref\":\"DK-51260\",\"supplier_id\":\"S02\",\"item\":\"PKE\",\"qty\":25,\"unit\":\"t\",\"received_by\":\"Callum Reid\",\"days_ago\":2},{\"docket_ref\":\"DK-90301\",\"supplier_id\":\"S03\",\"item\":\"Diesel\",\"qty\":3000,\"unit\":\"L\",\"received_by\":\"Fiona McLeod\",\"days_ago\":4}],\"INVOICES\":[{\"key\":\"A\",\"supplier_id\":\"S01\",\"ref\":\"AF-77391\",\"day\":3,\"item\":\"Urea (46% N)\",\"qty\":24,\"unit\":\"t\",\"price\":890,\"docket\":\"DK-20318\"},{\"key\":\"B\",\"supplier_id\":\"S01\",\"ref\":\"AF-77402\",\"day\":5,\"item\":\"Urea (46% N)\",\"qty\":18,\"unit\":\"t\",\"price\":925,\"docket\":\"DK-20344\"},{\"key\":\"C\",\"supplier_id\":\"S02\",\"ref\":\"FS-5588\",\"day\":6,\"item\":\"PKE\",\"qty\":30,\"unit\":\"t\",\"price\":395,\"docket\":\"DK-51207\"},{\"key\":\"D\",\"supplier_id\":\"S03\",\"ref\":\"IFS-30977\",\"day\":9,\"item\":\"Diesel\",\"qty\":4000,\"unit\":\"L\",\"price\":1.78,\"docket\":\"DK-90234\",\"bank\":\"12-3401-0987650-00\"},{\"key\":\"E\",\"supplier_id\":\"S04\",\"ref\":\"RRV-2204\",\"day\":10,\"item\":\"Vet consult\",\"qty\":6.5,\"unit\":\"h\",\"price\":170},{\"key\":\"F\",\"supplier_id\":\"S05\",\"ref\":\"MSC-0931\",\"day\":11,\"item\":\"Stock cartage\",\"qty\":3,\"unit\":\"load\",\"price\":540},{\"key\":\"G\",\"supplier_id\":\"S06\",\"ref\":\"WC-1203\",\"day\":12,\"item\":\"Baleage wrapping\",\"qty\":300,\"unit\":\"bale\",\"price\":24.5},{\"key\":\"I\",\"supplier_id\":\"S03\",\"ref\":\"IFS-30418\",\"day\":13,\"item\":\"Diesel\",\"qty\":3500,\"unit\":\"L\",\"price\":1.78,\"docket\":\"DK-90118\"},{\"key\":\"M\",\"supplier_id\":\"S01\",\"ref\":\"AF-77455\",\"day\":14,\"item\":\"Lime\",\"qty\":150,\"unit\":\"t\",\"price\":62,\"docket\":\"DK-20361\"}],\"HISTORY\":[{\"key\":\"H1\",\"supplier_id\":\"S03\",\"ref\":\"IFS-30418\",\"day\":24,\"item\":\"Diesel\",\"qty\":3500,\"unit\":\"L\",\"price\":1.78,\"docket\":\"DK-90118\",\"contract_id\":\"K04\"},{\"key\":\"H2\",\"supplier_id\":\"S06\",\"ref\":\"WC-1187\",\"day\":15,\"item\":\"Baleage wrapping\",\"qty\":2100,\"unit\":\"bale\",\"price\":24.5,\"contract_id\":\"K07\"},{\"key\":\"H3\",\"supplier_id\":\"S01\",\"ref\":\"AF-77120\",\"day\":9,\"item\":\"Urea (46% N)\",\"qty\":40,\"unit\":\"t\",\"price\":890,\"docket\":\"DK-4471\",\"contract_id\":\"K01\"},{\"key\":\"H4\",\"supplier_id\":\"S02\",\"ref\":\"FS-5521\",\"day\":11,\"item\":\"PKE\",\"qty\":50,\"unit\":\"t\",\"price\":395,\"docket\":\"DK-51102\",\"contract_id\":\"K03\"}],\"FARMS\":[{\"farm_id\":\"F01\",\"name\":\"Oreti Flats Dairy\",\"slug\":\"oreti-flats\",\"farm_type\":\"Dairy\",\"location\":\"Winton\",\"area_ha\":386,\"manager_name\":\"Callum Reid\",\"manager_email\":\"callum.reid@tussockridge.example\",\"manager_phone\":\"+64210000103\"},{\"farm_id\":\"F02\",\"name\":\"Hillcrest Station\",\"slug\":\"hillcrest\",\"farm_type\":\"Sheep and beef\",\"location\":\"Gore\",\"area_ha\":1240,\"manager_name\":\"Fiona McLeod\",\"manager_email\":\"fiona.mcleod@tussockridge.example\",\"manager_phone\":\"+64210000104\"},{\"farm_id\":\"F03\",\"name\":\"Mataura Valley Run-off\",\"slug\":\"mataura-run-off\",\"farm_type\":\"Support block\",\"location\":\"Mataura\",\"area_ha\":212,\"manager_name\":\"Tane Wiremu\",\"manager_email\":\"tane.wiremu@tussockridge.example\",\"manager_phone\":\"+64210000105\"}],\"PROVIDERS\":{\"gis\":{\"name\":\"Priya Chand\",\"email\":\"priya@southerngis.example\",\"phone\":\"\"},\"consultant\":{\"name\":\"Anna Lindqvist\",\"email\":\"anna@lindqvistenv.example\",\"phone\":\"\"},\"nutrient\":{\"name\":\"Mere Parata\",\"email\":\"mere@paddockplan.example\",\"phone\":\"\"},\"fert\":{\"name\":\"Josh Henare\",\"email\":\"josh@aparima-fert.example\",\"phone\":\"+64210000108\"},\"fencing\":{\"name\":\"Deane Walker\",\"email\":\"deane@deanefencing.example\",\"phone\":\"+64210000109\"},\"effluent\":{\"name\":\"Gareth Pullar\",\"email\":\"gareth@farmdairydesign.example\",\"phone\":\"\"},\"manager\":null},\"REQUIREMENTS\":[{\"req_id\":\"R01\",\"short\":\"farm-map\",\"requirement\":\"Farm map showing waterways, wetlands and paddocks\",\"category\":\"Maps\",\"applies_to\":\"All\",\"provider\":\"gis\"},{\"req_id\":\"R02\",\"short\":\"critical-source-areas\",\"requirement\":\"Critical source areas identified\",\"category\":\"Environment\",\"applies_to\":\"All\",\"provider\":\"consultant\"},{\"req_id\":\"R03\",\"short\":\"stock-numbers\",\"requirement\":\"Stock numbers by class, last 12 months\",\"category\":\"Stock\",\"applies_to\":\"All\",\"provider\":\"manager\"},{\"req_id\":\"R04\",\"short\":\"fertiliser-records\",\"requirement\":\"Fertiliser and nitrogen use records\",\"category\":\"Nutrients\",\"applies_to\":\"All\",\"provider\":\"fert\"},{\"req_id\":\"R05\",\"short\":\"nutrient-budget\",\"requirement\":\"Nutrient budget\",\"category\":\"Nutrients\",\"applies_to\":\"All\",\"provider\":\"nutrient\"},{\"req_id\":\"R06\",\"short\":\"effluent-consent\",\"requirement\":\"Effluent system description and discharge consent\",\"category\":\"Effluent\",\"applies_to\":\"Dairy\",\"provider\":\"effluent\"},{\"req_id\":\"R07\",\"short\":\"water-take-records\",\"requirement\":\"Water take consent and meter records\",\"category\":\"Water\",\"applies_to\":\"Dairy\",\"provider\":\"manager\"},{\"req_id\":\"R08\",\"short\":\"winter-grazing-plan\",\"requirement\":\"Winter grazing plan\",\"category\":\"Grazing\",\"applies_to\":\"All\",\"provider\":\"manager\"},{\"req_id\":\"R09\",\"short\":\"stock-exclusion-fencing\",\"requirement\":\"Stock exclusion: waterway fencing status\",\"category\":\"Stock\",\"applies_to\":\"All\",\"provider\":\"fencing\"},{\"req_id\":\"R10\",\"short\":\"risk-assessment\",\"requirement\":\"Farm environment risk assessment\",\"category\":\"Environment\",\"applies_to\":\"All\",\"provider\":\"consultant\"}],\"EVIDENCE_START\":{\"F01\":{\"R05\":\"received\",\"R06\":\"missing\",\"R07\":{\"s\":\"requested\",\"sent\":1,\"ago\":8},\"R08\":\"missing\"},\"F02\":{\"R05\":{\"s\":\"requested\",\"sent\":2,\"ago\":9},\"R09\":\"missing\"},\"F03\":{\"R08\":\"received\"}},\"REGISTER\":[{\"reg_id\":\"G01\",\"farm_id\":\"F01\",\"kind\":\"Consent\",\"type\":\"Water take consent (irrigation)\",\"reference\":\"DEMO-WT-0412\",\"who\":\"owner\",\"days\":150,\"restriction\":\"taking irrigation water\"},{\"reg_id\":\"G02\",\"farm_id\":\"F01\",\"kind\":\"Consent\",\"type\":\"Farm dairy effluent discharge consent\",\"reference\":\"DEMO-DE-0307\",\"who\":\"owner\",\"days\":410,\"restriction\":\"discharging effluent\"},{\"reg_id\":\"G03\",\"farm_id\":\"F02\",\"kind\":\"Consent\",\"type\":\"Water take consent (stock water)\",\"reference\":\"DEMO-WT-0588\",\"who\":\"owner\",\"days\":520,\"restriction\":\"taking stock water\"},{\"reg_id\":\"G04\",\"farm_id\":\"F01\",\"kind\":\"Certificate\",\"type\":\"Agrichemical handler certificate\",\"reference\":\"\",\"who\":\"Jordan Ngata\",\"days\":-12,\"restriction\":\"spraying\"},{\"reg_id\":\"G05\",\"farm_id\":\"F01\",\"kind\":\"Certificate\",\"type\":\"Agrichemical handler certificate\",\"reference\":\"\",\"who\":\"Callum Reid\",\"days\":19,\"restriction\":\"spraying\"},{\"reg_id\":\"G06\",\"farm_id\":\"F01\",\"kind\":\"Certificate\",\"type\":\"Quad bike training\",\"reference\":\"\",\"who\":\"Sam Whitaker\",\"days\":null,\"restriction\":\"riding farm quad bikes\"},{\"reg_id\":\"G07\",\"farm_id\":\"F02\",\"kind\":\"Certificate\",\"type\":\"First aid certificate\",\"reference\":\"\",\"who\":\"Fiona McLeod\",\"days\":200,\"restriction\":\"\"},{\"reg_id\":\"G08\",\"farm_id\":\"F03\",\"kind\":\"Certificate\",\"type\":\"First aid certificate\",\"reference\":\"\",\"who\":\"Tane Wiremu\",\"days\":25,\"restriction\":\"\"},{\"reg_id\":\"G09\",\"farm_id\":\"F01\",\"kind\":\"Vehicle\",\"type\":\"Farm truck certificate of fitness (COF)\",\"reference\":\"Truck HX-1186\",\"who\":\"Callum Reid\",\"days\":6,\"restriction\":\"driving the farm truck on the road\"},{\"reg_id\":\"G10\",\"farm_id\":\"F01\",\"kind\":\"Certificate\",\"type\":\"Hazardous substances location compliance certificate\",\"reference\":\"Fuel and LPG store\",\"who\":\"Callum Reid\",\"days\":300,\"restriction\":\"storing fuel and LPG at the site\"},{\"reg_id\":\"G11\",\"farm_id\":\"\",\"kind\":\"Insurance\",\"type\":\"Public liability insurance (certificate of currency)\",\"reference\":\"\",\"who\":\"Aroha Tipene\",\"days\":42,\"restriction\":\"\"},{\"reg_id\":\"G12\",\"farm_id\":\"F01\",\"kind\":\"Certificate\",\"type\":\"Heavy vehicle licence (Class 2)\",\"reference\":\"\",\"who\":\"Jordan Ngata\",\"days\":640,\"restriction\":\"driving heavy vehicles\"}],\"STAFF\":{\"Callum Reid\":{\"email\":\"callum.reid@tussockridge.example\",\"phone\":\"+64210000103\"},\"Fiona McLeod\":{\"email\":\"fiona.mcleod@tussockridge.example\",\"phone\":\"+64210000104\"},\"Tane Wiremu\":{\"email\":\"tane.wiremu@tussockridge.example\",\"phone\":\"+64210000105\"},\"Jordan Ngata\":{\"email\":\"jordan.ngata@tussockridge.example\",\"phone\":\"+64210000106\"},\"Sam Whitaker\":{\"email\":\"sam.whitaker@tussockridge.example\",\"phone\":\"+64210000107\"},\"Aroha Tipene\":{\"email\":\"aroha.tipene@tussockridge.example\",\"phone\":\"+64210000102\"}}};\n// The rules the agent applies to every supplier invoice. Injected into the nodes that check or show invoices.\n// The agent only checks and flags. Approving and paying are always a person's decision.\nconst norm = (s) => String(s ?? '').trim().toLowerCase();\nconst digitsOf = (s) => String(s ?? '').replace(/\\D/g, '');\n\n// The next payment date on or after `today`: the payDay-th of this month, or of next month once it has passed.\nconst nextPayDate = (today, payDay) => {\n  const d = dateOf(today);\n  const month = d.getUTCDate() > payDay ? d.getUTCMonth() + 1 : d.getUTCMonth();\n  return isoDay(new Date(Date.UTC(d.getUTCFullYear(), month, payDay)));\n};\n// Standard rural terms: the 20th of the month following the invoice date.\nconst dueDateFor = (invoiceDate, payDay) => {\n  const d = dateOf(invoiceDate);\n  return isoDay(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, payDay)));\n};\nconst parseChecks = (inv) => { try { return JSON.parse(inv.reasons || '[]'); } catch { return []; } };\nconst failedChecks = (inv) => parseChecks(inv).filter((c) => !c.ok);\n\nconst approverFor = (role, cfg) => (role === 'owner'\n  ? { role, title: 'owner', name: cfg.owner_name, email: cfg.owner_email, phone: cfg.owner_phone, token: cfg.approver_token_owner }\n  : { role, title: 'operations manager', name: cfg.manager_name, email: cfg.manager_email, phone: cfg.manager_phone, token: cfg.approver_token_manager });\n\n// status → [tone, label]\nconst INVOICE_STATUS = {\n  received: ['grey', 'New, not checked yet'],\n  matched: ['info', 'Clean, waiting for approval'],\n  flagged: ['warn', 'Flagged, waiting for a decision'],\n  approved: ['ok', 'Approved'],\n  queried: ['warn', 'Queried with supplier'],\n  rejected: ['bad', 'Rejected'],\n  scheduled: ['ok', 'In payment file'],\n  paid: ['grey', 'Paid'],\n};\nconst invoiceStatusPill = (inv) => { const [tone, label] = INVOICE_STATUS[inv.status] || ['grey', inv.status]; return pill(tone, label); };\n\n// Runs every check on one invoice. ctx = { cfg, suppliers (by id), contracts, dockets, invoices (all), used (contract_id → qty used) }.\n// Each check has `text` (for the farm) and, when it fails, `ask` (a sentence that is safe to send to the supplier).\nconst checkInvoice = (inv, ctx) => {\n  const cfg = ctx.cfg;\n  const gst = Number(cfg.gst_rate || 0.15);\n  const sup = ctx.suppliers[inv.supplier_id];\n  const supName = sup ? sup.name : 'this supplier';\n  const qty = Number(inv.qty);\n  const price = Number(inv.unit_price);\n  const total = Number(inv.total);\n  const checks = [];\n  const add = (id, label, ok, text, extra = {}) => checks.push({ id, label, ok, text, short: ok ? '' : (extra.short || label), ask: ok ? '' : (extra.ask || ''), level: ok ? 'ok' : (extra.level || 'warn'), risk: ok ? 0 : round2(extra.risk || 0) });\n  // Only an earlier invoice can make this one a duplicate.\n  const earlier = (o) => o.received_at < inv.received_at || (o.received_at === inv.received_at && o.invoice_id < inv.invoice_id);\n\n  // 1. Is there a contract in force for this item?\n  const sameItem = ctx.contracts.filter((c) => c.supplier_id === inv.supplier_id && norm(c.item) === norm(inv.item));\n  const contract = sameItem.find((c) => inv.invoice_date >= c.valid_from && inv.invoice_date <= c.valid_to);\n  if (contract) add('contract', 'Matches a contract', true, `${contract.contract_id}: ${contract.description}.`);\n  else if (sameItem.length) add('contract', 'Matches a contract', false, `The ${inv.item} contract with ${supName} was not in force on ${fmtDate(inv.invoice_date)} (it runs ${fmtDate(sameItem[0].valid_from)} to ${fmtDate(sameItem[0].valid_to)}).`,\n    { short: 'Contract not in force on the invoice date', ask: `We could not match this invoice to an agreement in force on ${fmtDate(inv.invoice_date)}. Could you send us the agreement it is based on?` });\n  else add('contract', 'Matches a contract', false, `No contract or agreed price covers ${inv.item} from ${supName}. Find the agreement, or confirm this is a one-off purchase.`,\n    { short: 'No contract covers this item', ask: `We could not match \"${inv.item}\" to an agreed price on our side. Could you send us the quote or agreement it is based on?` });\n\n  if (contract) {\n    // 2. Unit price against the contract, with a small tolerance.\n    const agreed = Number(contract.agreed_price);\n    const tol = Number(contract.tolerance_pct ?? cfg.price_tolerance_pct ?? 2);\n    const diffPct = ((price - agreed) / agreed) * 100;\n    if (norm(inv.unit) !== norm(contract.unit)) {\n      add('price', 'Price matches the contract', false, `Invoiced per ${inv.unit}, but the contract price is per ${contract.unit}.`,\n        { short: 'Priced per a different unit from the contract', ask: `The invoice is priced per ${inv.unit}, but our agreement is per ${contract.unit}. Please check and confirm the price.` });\n    } else if (diffPct > tol) {\n      const over = round2((price - agreed) * qty);\n      add('price', 'Price matches the contract', false, `Unit price ${priceText(price)} is ${diffPct.toFixed(1)}% above the contract price of ${priceText(agreed)} per ${contract.unit}: ${money(over)} too much on ${qtyText(qty)} ${inv.unit} (ex GST).`,\n        { short: `Price ${diffPct.toFixed(1)}% over the contract`, risk: over * (1 + gst), ask: `The unit price of ${priceText(price)} per ${contract.unit} is above the agreed ${priceText(agreed)} per ${contract.unit} (${money(over)} more, ex GST). Please check it, or send us the agreement that supports the higher price.` });\n    } else if (diffPct > 0.0001) {\n      add('price', 'Price matches the contract', true, `${priceText(price)} per ${contract.unit} is ${diffPct.toFixed(1)}% above the contract price, within the ${tol}% tolerance.`);\n    } else {\n      add('price', 'Price matches the contract', true, `${priceText(price)} per ${contract.unit}${diffPct < -0.0001 ? ' (below' : ' (matches'} the contract price of ${priceText(agreed)}).`);\n    }\n\n    // 3. How much of the contract volume is used up?\n    const used = ctx.used[contract.contract_id] || 0;\n    const agreedQty = Number(contract.qty_agreed);\n    if (qty > agreedQty - used + 0.0001) {\n      const overQty = round2(used + qty - agreedQty);\n      add('volume', 'Within the contract volume', false, `This invoice takes ${contract.item} to ${qtyText(used + qty)} of ${qtyText(agreedQty)} ${contract.unit} agreed (${qtyText(overQty)} ${contract.unit} over). Confirm the price for the extra volume.`,\n        { short: `${qtyText(overQty)} ${contract.unit} over the contract volume`, risk: overQty * price * (1 + gst), ask: `This invoice takes our total to ${qtyText(used + qty)} ${contract.unit}, which is above the ${qtyText(agreedQty)} ${contract.unit} we agreed. Please confirm the price that applies to the extra ${qtyText(overQty)} ${contract.unit}.` });\n    } else {\n      add('volume', 'Within the contract volume', true, `${qtyText(used + qty)} of ${qtyText(agreedQty)} ${contract.unit} used after this invoice.`);\n    }\n  }\n\n  // 4. Delivery docket: was the delivery signed for, does the quantity match, and was the docket already invoiced?\n  const needsDocket = contract ? contract.needs_docket === 'yes' : !!inv.docket_ref;\n  if (inv.docket_ref) {\n    const docket = ctx.dockets.find((d) => norm(d.docket_ref) === norm(inv.docket_ref) && d.supplier_id === inv.supplier_id);\n    const reused = ctx.invoices.find((o) => o.invoice_id !== inv.invoice_id && norm(o.docket_ref) === norm(inv.docket_ref) && o.status !== 'rejected' && earlier(o));\n    if (!docket) {\n      add('docket', 'Matches a delivery docket', false, `Docket ${inv.docket_ref} is not in the delivery records. Was this delivery signed for?`,\n        { short: 'Docket not in the delivery records', ask: `We cannot find delivery docket ${inv.docket_ref} in our records. Could you send us a copy of the signed docket?` });\n    } else if (qty > Number(docket.qty) + 0.0001) {\n      const short = round2(qty - Number(docket.qty));\n      add('docket', 'Matches a delivery docket', false, `Invoiced ${qtyText(qty)} ${inv.unit}, but docket ${docket.docket_ref} shows ${qtyText(docket.qty)} ${docket.unit} delivered on ${fmtDate(docket.delivered_on)}: ${qtyText(short)} ${inv.unit} not delivered (${money(short * price)} ex GST).`,\n        { short: `Docket shows ${qtyText(docket.qty)} ${docket.unit}, invoiced ${qtyText(qty)}`, risk: short * price * (1 + gst), ask: `You invoiced ${qtyText(qty)} ${inv.unit}, but our signed docket ${docket.docket_ref} shows ${qtyText(docket.qty)} ${docket.unit} delivered on ${fmtDate(docket.delivered_on)}. Please check and send a corrected invoice.` });\n    } else if (reused) {\n      add('docket', 'Matches a delivery docket', false, `Docket ${docket.docket_ref} was already invoiced on ${reused.invoice_id} (${reused.supplier_ref}, ${money(reused.total)}). One delivery should be invoiced once.`,\n        { short: 'Docket already invoiced', risk: total, ask: `Delivery docket ${docket.docket_ref} has already been invoiced on ${reused.supplier_ref}. Please confirm this invoice is not a repeat.` });\n    } else {\n      add('docket', 'Matches a delivery docket', true, `Docket ${docket.docket_ref}: ${qtyText(docket.qty)} ${docket.unit} delivered ${fmtDate(docket.delivered_on)}, signed by ${docket.received_by}.`);\n    }\n  } else if (needsDocket) {\n    add('docket', 'Matches a delivery docket', false, 'No delivery docket reference on this invoice. Check the delivery was received before paying.',\n      { short: 'No delivery docket number', ask: 'There is no delivery docket number on this invoice. Please send the docket number or a copy of the signed docket.' });\n  } else {\n    add('docket', 'Matches a delivery docket', true, 'A service invoice: no delivery docket needed.');\n  }\n\n  // 5. Arithmetic and GST.\n  const net = round2(qty * price);\n  const gstExpected = round2(net * gst);\n  const problems = [];\n  let gstRisk = 0;\n  if (Math.abs(Number(inv.net) - net) > 0.02) { problems.push(`Net ${money(inv.net)} is not ${qtyText(qty)} × ${priceText(price)} = ${money(net)}.`); gstRisk = Math.max(gstRisk, Math.abs(Number(inv.net) - net)); }\n  if (Math.abs(Number(inv.gst) - gstExpected) > 0.02) { problems.push(`GST is ${money(inv.gst)}, but ${Math.round(gst * 100)}% of ${money(net)} is ${money(gstExpected)}.`); gstRisk = Math.max(gstRisk, Math.abs(Number(inv.gst) - gstExpected)); }\n  if (Math.abs(total - (Number(inv.net) + Number(inv.gst))) > 0.02) { problems.push(`The total ${money(total)} is not net plus GST (${money(Number(inv.net) + Number(inv.gst))}).`); gstRisk = Math.max(gstRisk, Math.abs(total - (Number(inv.net) + Number(inv.gst)))); }\n  if (problems.length) add('gst', 'Arithmetic and GST add up', false, problems.join(' '), { short: 'GST or total does not add up', risk: gstRisk, ask: `The amounts on this invoice do not add up: ${problems.join(' ')} Please send a corrected invoice.` });\n  else add('gst', 'Arithmetic and GST add up', true, `${money(net)} plus GST ${money(inv.gst)} makes ${money(total)}.`);\n\n  // 6. Has this invoice been seen before?\n  const dup = ctx.invoices.find((o) => o.invoice_id !== inv.invoice_id && o.supplier_id === inv.supplier_id && o.status !== 'rejected' && earlier(o)\n    && ((norm(o.supplier_ref) && norm(o.supplier_ref) === norm(inv.supplier_ref)) || (round2(o.total) === round2(total) && o.invoice_date === inv.invoice_date)));\n  if (dup) add('duplicate', 'Not a duplicate', false, `Supplier invoice number ${inv.supplier_ref} was already received as ${dup.invoice_id} (${(INVOICE_STATUS[dup.status] || ['', dup.status])[1].toLowerCase()}, dated ${fmtDate(dup.invoice_date)}, ${money(dup.total)}).`,\n    { short: 'Looks like a duplicate', risk: total, ask: `Invoice ${inv.supplier_ref} looks like one we have already received (${money(dup.total)}, dated ${fmtDate(dup.invoice_date)}). Please confirm it is not a duplicate.` });\n  else add('duplicate', 'Not a duplicate', true, 'Not seen before from this supplier.');\n\n  // 7. Bank account against the supplier record. Payments always go to the account on file.\n  const invBank = digitsOf(inv.bank_account);\n  const fileBank = digitsOf(sup && sup.bank_account);\n  if (invBank && fileBank && invBank !== fileBank) {\n    add('bank', 'Bank account matches the one on file', false, `The invoice shows ${inv.bank_account}, but the account on file is ${sup.bank_account}. Phone the supplier on a number you already have before paying anything. Payments always go to the account on file.`,\n      { short: 'Bank account is not the one on file', level: 'high', risk: total, ask: `The bank account on this invoice (${inv.bank_account}) is different from the one we hold on file. Please phone us to confirm any change of bank details. We will not pay to a different account until we have spoken.` });\n  } else {\n    add('bank', 'Bank account matches the one on file', true, invBank ? 'Same account as on file.' : 'No account on the invoice; payment goes to the account on file.');\n  }\n\n  const failed = checks.filter((c) => !c.ok);\n  const result = failed.length ? 'Review' : 'Clean';\n  return {\n    contract, checks, result,\n    at_risk: failed.reduce((m, c) => Math.max(m, c.risk), 0),\n    due_date: dueDateFor(inv.invoice_date, Number(cfg.pay_day || 20)),\n    approver_role: failed.length || total > Number(cfg.manager_limit || 2500) ? 'owner' : 'manager',\n    summary: failed.map((c) => c.text).join(' '),\n  };\n};\n\n// Builds the Monday-morning starting point for the demo. DEMO_DATA is injected by the build script from scripts/demo-data.mjs.\n// Every date is worked out from today in New Zealand time, so each reset tells the same story whenever you record it:\n// nine invoices to check (four hide a problem), farm plan evidence partly collected, and consents running out.\n// Returns one item with an array of rows per data table.\nconst D = DEMO_DATA;\nconst today = nzToday();\nconst now = Date.now();\nconst HOUR = 3600000;\nconst iso = (ms) => new Date(ms).toISOString();\nconst cfgObj = Object.fromEntries(D.CONFIG.map((c) => [c.key, c.value]));\nconst payDay = Number(cfgObj.pay_day);\nconst payDate = nextPayDate(today, payDay);\n// Seeded invoices are dated in the month before the pay date, so every one of them is due on the pay date.\nconst pd = dateOf(payDate);\nconst invMonth = new Date(Date.UTC(pd.getUTCFullYear(), pd.getUTCMonth() - 1, 1));\nconst histMonth = new Date(Date.UTC(pd.getUTCFullYear(), pd.getUTCMonth() - 2, 1));\nconst dayIn = (monthStart, day) => isoDay(new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), day)));\nconst audit = [];\nconst log = (at, actor, type, flow, subject, action, detail) => audit.push({ at: iso(at), actor, actor_type: type, flow, subject, action, detail: detail || '' });\n\nconst config = [...D.CONFIG,\n  { key: 'approver_token_owner', value: newToken() },\n  { key: 'approver_token_manager', value: newToken() },\n  { key: 'demo_reset_on', value: today }];\nconst sup = Object.fromEntries(D.SUPPLIERS.map((s) => [s.supplier_id, s]));\n\n// ---- suppliers, contracts, delivery dockets\nconst contracts = D.CONTRACTS.map((c) => ({ ...c, valid_from: addDays(today, -150), valid_to: addDays(today, 215), tolerance_pct: 2 }));\nconst invoiceDateOf = (key) => {\n  const spec = [...D.INVOICES, ...D.HISTORY].find((i) => i.key === key);\n  return dayIn(key.startsWith('H') ? histMonth : invMonth, spec.day);\n};\nconst dockets = D.DOCKETS.map((d) => ({\n  docket_ref: d.docket_ref, supplier_id: d.supplier_id, item: d.item, qty: d.qty, unit: d.unit,\n  delivered_on: d.invoice ? addDays(invoiceDateOf(d.invoice), -2) : addDays(today, -d.days_ago), received_by: d.received_by,\n}));\n\n// ---- invoices: this week's (not yet checked) and the paid history\nconst year = today.slice(0, 4);\nlet seq = 1000;\nconst invoice = (spec, month, extra) => {\n  const net = round2(spec.qty * spec.price);\n  const gst = round2(net * 0.15);\n  const invoice_date = dayIn(month, spec.day);\n  return {\n    invoice_id: `INV-${year}-${++seq}`, supplier_id: spec.supplier_id, supplier_ref: spec.ref, invoice_date, due_date: dueDateFor(invoice_date, payDay),\n    item: spec.item, description: `${spec.item}, ${qtyText(spec.qty)} ${unitText(spec.qty, spec.unit)}`, qty: spec.qty, unit: spec.unit, unit_price: spec.price,\n    net, gst, total: round2(net + gst), bank_account: spec.bank || sup[spec.supplier_id].bank_account, docket_ref: spec.docket || '',\n    source: '', received_at: '', status: 'received', contract_id: '', result: '', reasons: '', at_risk: 0, checked_at: '', approver_role: '', approver_name: '',\n    review_token: '', approval_requested_at: '', decision: '', decided_at: '', decided_by: '', decision_note: '', payment_file: '', ...extra,\n  };\n};\nconst invoices = [];\nD.HISTORY.forEach((h) => {\n  const decided = Date.parse(`${dayIn(histMonth, h.day)}T10:00:00Z`) + 3 * 86400000;\n  const inv = invoice(h, histMonth, {\n    source: 'Email: invoices@tussockridge.example', received_at: iso(Date.parse(`${dayIn(histMonth, h.day)}T09:00:00Z`)), status: 'paid', contract_id: h.contract_id, result: 'Clean', reasons: '[]',\n    checked_at: iso(decided - 86400000), approver_role: 'owner', approver_name: cfgObj.owner_name, decision: 'approved', decided_at: iso(decided), decided_by: cfgObj.owner_name, payment_file: 'payment-run-earlier.csv',\n  });\n  invoices.push(inv);\n  log(decided - 86400000, 'Agent', 'agent', 'Invoices', inv.invoice_id, 'Matched to contract', `${h.contract_id}: all checks passed.`);\n  log(decided, cfgObj.owner_name, 'person', 'Invoices', inv.invoice_id, 'Approved', `${sup[h.supplier_id].name} ${h.ref}, ${money(inv.total)}.`);\n  log(decided + 86400000, 'Agent', 'agent', 'Payments', inv.invoice_id, 'Added to payment file', 'payment-run-earlier.csv');\n});\nD.INVOICES.forEach((spec, i) => {\n  invoices.push(invoice(spec, invMonth, { source: 'Email: invoices@tussockridge.example', received_at: iso(now - (D.INVOICES.length - i) * 7 * 60000) }));\n});\n// ---- farms, the checklist and the evidence\nconst farms = D.FARMS.map((f) => ({\n  farm_id: f.farm_id, name: f.name, farm_type: f.farm_type, location: f.location, region: cfgObj.region, area_ha: f.area_ha,\n  manager_name: f.manager_name, manager_email: f.manager_email, manager_phone: f.manager_phone,\n  pack_status: 'Collecting', pack_token: newToken(), signoff_token: newToken(), ready_at: '', signed_by: '', signed_at: '', sent_at: '', sent_to: '',\n}));\nconst requirements = D.REQUIREMENTS.map((r) => {\n  const p = D.PROVIDERS[r.provider];\n  return { req_id: r.req_id, requirement: r.requirement, category: r.category, applies_to: r.applies_to, provider_name: p ? p.name : '', provider_email: p ? p.email : '', provider_phone: p ? p.phone : '' };\n});\nconst evidence = [];\nD.FARMS.forEach((fd, fi) => {\n  const farm = farms[fi];\n  D.REQUIREMENTS.filter((r) => r.applies_to === 'All' || r.applies_to === fd.farm_type).forEach((req, n) => {\n    const start = (D.EVIDENCE_START[fd.farm_id] || {})[req.req_id];\n    const s = typeof start === 'string' ? { s: start } : start || { s: 'verified' };\n    const p = D.PROVIDERS[req.provider] || { name: farm.manager_name, email: farm.manager_email, phone: farm.manager_phone };\n    const hasFile = s.s === 'received' || s.s === 'verified';\n    const verified = s.s === 'verified';\n    const received = hasFile ? iso(s.s === 'received' ? now - 3 * HOUR : now - (24 + n) * 86400000) : '';\n    const item = {\n      item_id: `E-${farm.farm_id}-${req.req_id}`, farm_id: farm.farm_id, req_id: req.req_id, requirement: req.requirement, category: req.category,\n      provider_name: p.name, provider_email: p.email, provider_phone: p.phone, status: s.s, upload_token: newToken(),\n      file_name: hasFile ? 'seed-sample-evidence.pdf' : '', original_name: hasFile ? `${fd.slug}-${req.short}.pdf` : '', received_at: received,\n      verified_at: verified ? iso(now - (12 + n) * 86400000) : '', verified_by: verified ? farm.manager_name : '',\n      requests_sent: s.s === 'missing' ? 0 : (s.sent ?? 1), last_request_at: s.s === 'requested' ? iso(now - s.ago * 86400000) : hasFile ? iso(now - (30 + n) * 86400000) : '', note: '',\n    };\n    evidence.push(item);\n    if (verified) log(now - (12 + n) * 86400000, farm.manager_name, 'person', 'Farm plan', farm.name, `Verified: ${req.requirement}`, `Checked against ${item.original_name}.`);\n  });\n});\n\n// ---- consents, certificates and other records with an expiry date\nconst register = D.REGISTER.map((g) => {\n  const who = g.who === 'owner' ? { name: cfgObj.owner_name, email: cfgObj.owner_email, phone: cfgObj.owner_phone } : { name: g.who, ...D.STAFF[g.who] };\n  const verified = g.days !== null;\n  return {\n    reg_id: g.reg_id, farm_id: g.farm_id, kind: g.kind, type: g.type, reference: g.reference, holder: g.kind === 'Consent' ? cfgObj.business_name : who.name,\n    responsible_name: who.name, responsible_email: who.email, responsible_phone: who.phone, restriction: g.restriction,\n    expiry_date: verified ? addDays(today, g.days) : '', status: verified ? 'verified' : 'missing', new_expiry: '', upload_token: newToken(),\n    file_name: verified ? 'seed-sample-certificate.pdf' : '', original_name: verified ? `${g.type.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.pdf` : '',\n    received_at: verified ? iso(now - 90 * 86400000) : '', verified_at: verified ? iso(now - 88 * 86400000) : '', verified_by: verified ? cfgObj.admin_name : '',\n    reminders_sent: 0, last_reminder_at: '', renewal_lodged_at: '', last_state: '', note: '',\n  };\n});\n\nlog(now, 'System', 'system', 'Demo', 'Demo data', 'Reset', 'Monday-morning demo data loaded.');\nconst toCheck = invoices.filter((i) => i.status === 'received').length;\nreturn [{ json: {\n  Config: config, Suppliers: D.SUPPLIERS, Contracts: contracts, Dockets: dockets, Invoices: invoices, Farms: farms, Requirements: requirements,\n  Evidence: evidence, Register: register, 'Audit log': audit,\n  summary: `Demo data reset: ${toCheck} new invoices to check, next pay date ${fmtDate(payDate)}.`,\n} }];\n"
+      },
+      "id": "c95963f5-b064-4168-a017-9173368abcc9"
+    },
+    {
+      "name": "Rows: Config",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        300
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Config",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "dbb60f78-7cd9-47a8-a09d-5f70e49fbf24"
+    },
+    {
+      "name": "Insert Config",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2780,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Config"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e4b34d1a-7c8e-4710-a2ca-947792145862"
+    },
+    {
+      "name": "Rows: Suppliers",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        450
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Suppliers",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "b0c88253-d7c1-4ba7-a4d7-4cf0a434b600"
+    },
+    {
+      "name": "Insert Suppliers",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2780,
+        450
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Suppliers"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "4bfd058b-a368-4b1a-a9de-0a29678850cc"
+    },
+    {
+      "name": "Rows: Contracts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        600
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Contracts",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "ceaf9528-364c-4471-af86-d8c162e23bde"
+    },
+    {
+      "name": "Insert Contracts",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2780,
+        600
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Contracts"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "a883be5e-51a8-4ec3-a722-e7f4233b8766"
+    },
+    {
+      "name": "Rows: Dockets",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        750
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Dockets",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "fc21ef2c-a988-4746-a272-66dd6ae1d811"
+    },
+    {
+      "name": "Insert Dockets",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2780,
+        750
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Dockets"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "3bc8579c-2a55-4fd5-a380-05102e06ace1"
+    },
+    {
+      "name": "Rows: Invoices",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        900
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Invoices",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "6bae6ef2-b16d-4c39-a9a1-841979abe64a"
+    },
+    {
+      "name": "Insert Invoices",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2780,
+        900
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Invoices"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "90b5af0d-2e74-4c01-aeb7-db8d539f93a4"
+    },
+    {
+      "name": "Rows: Farms",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        1050
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Farms",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "4180cd7e-39f0-4895-a449-efdbae2fbf06"
+    },
+    {
+      "name": "Insert Farms",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2780,
+        1050
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Farms"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "7558134f-ec75-4d4d-abda-033ebacb5880"
+    },
+    {
+      "name": "Rows: Requirements",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        1200
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Requirements",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "9cb0d192-2ab9-4f97-a711-dba5e10caf18"
+    },
+    {
+      "name": "Insert Requirements",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2780,
+        1200
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Requirements"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "3e46ecf3-4ecc-4b25-a832-6a783964765f"
+    },
+    {
+      "name": "Rows: Evidence",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        1350
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Evidence",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "150abc45-fd99-4181-a075-47a01a291966"
+    },
+    {
+      "name": "Insert Evidence",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2780,
+        1350
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Evidence"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "000e87c5-8206-4887-a0da-14f22eb23078"
+    },
+    {
+      "name": "Rows: Register",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        1500
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Register",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "329186ea-e3a0-4ff4-ad5e-025be00c1274"
+    },
+    {
+      "name": "Insert Register",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2780,
+        1500
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Register"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "27c3fbb6-89a4-42d1-ab47-eb18a78f3511"
+    },
+    {
+      "name": "Rows: Audit log",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        1650
+      ],
+      "parameters": {
+        "fieldToSplitOut": "Audit log",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "4e0f9180-7707-40aa-a1e8-2ce02b22a8c5"
+    },
+    {
+      "name": "Insert Audit log",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2780,
+        1650
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Audit log"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6ec4b57c-6842-4abb-a6cd-0c3b71264d80"
+    },
+    {
+      "name": "Done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        1800
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst TZ = 'Pacific/Auckland';\nconst DAY_MS = 86400000;\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst round2 = (n) => Math.round(Number((Number(n || 0) * 100).toFixed(6))) / 100;\nconst money = (n) => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD' }).format(Number(n || 0));\nconst priceText = (n) => '$' + Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 4 });\nconst qtyText = (n) => Number(n || 0).toLocaleString('en-NZ', { maximumFractionDigits: 2 });\nconst unitText = (qty, unit) => (Number(qty) !== 1 && { load: 'loads', bale: 'bales' }[unit]) || unit;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\n// Each call is one millisecond later than the last, so rows written in one run keep their order.\nlet _seq = 0;\nconst nowIso = () => new Date(Date.now() + _seq++).toISOString();\n\n// Calendar dates are plain \"YYYY-MM-DD\" strings in New Zealand time, so this PC's own clock never matters.\nconst nzToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());\nconst dateOf = (s) => new Date(`${String(s).slice(0, 10)}T00:00:00Z`);\nconst isoDay = (d) => d.toISOString().slice(0, 10);\nconst addDays = (s, n) => isoDay(new Date(dateOf(s).getTime() + n * DAY_MS));\nconst addMonths = (s, n) => {\n  const d = dateOf(s);\n  const day = d.getUTCDate();\n  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));\n  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();\n  target.setUTCDate(Math.min(day, last));\n  return isoDay(target);\n};\nconst daysBetween = (from, to) => Math.round((dateOf(to) - dateOf(from)) / DAY_MS);\nconst fmtDate = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) : '—');\nconst fmtLong = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—');\nconst fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('en-NZ', { timeZone: TZ, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '');\nconst ago = (iso) => {\n  if (!iso) return '';\n  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));\n  if (s < 60) return 'just now';\n  if (s < 3600) return `${Math.round(s / 60)} min ago`;\n  if (s < 86400) return `${Math.round(s / 3600)} h ago`;\n  return `${Math.round(s / 86400)} d ago`;\n};\n\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst firstName = (name) => String(name || '').split(' ')[0];\nconst person = (cfg, role) => ({ name: cfg[`${role}_name`] || '', email: cfg[`${role}_email`] || '', phone: cfg[`${role}_phone`] || '' });\n\n// A message for the Shared · Send message workflow. Nothing is sent from anywhere else.\nconst msg = (m) => ({\n  channel: m.channel, to_name: m.to_name || '', to_address: m.to_address || '', subject: m.subject || '',\n  body: m.body || '', link: m.link || '', related: m.related || '', workflow: m.workflow || '',\n});\n// Text the phone if we have one, otherwise email. `both` sends the email as well.\nconst reach = (p, m, how = 'auto') => {\n  const out = [];\n  const to = { to_name: p.name, related: m.related, workflow: m.workflow };\n  if (p.phone && how !== 'email') out.push(msg({ ...to, channel: 'SMS', to_address: p.phone, body: m.sms || m.body, link: m.link }));\n  if (p.email && (how === 'email' || how === 'both' || !p.phone)) out.push(msg({ ...to, channel: 'Email', to_address: p.email, subject: m.subject, body: m.body, link: m.link }));\n  return out;\n};\n// One line of the audit trail: who did what, to what, and when.\nconst auditRow = (actor, type, flow, subject, action, detail = '') => ({\n  at: nowIso(), actor, actor_type: type, flow, subject: String(subject).slice(0, 200), action: String(action).slice(0, 200), detail: String(detail).slice(0, 700),\n});\n// The page a webhook link returns after a person acts: back to the console, on the same tab, with a notice.\nconst backToConsole = (cfg, tab, notice) => `${cfg.base_url}/webhook/console?tab=${encodeURIComponent(tab || 'gate')}&done=${encodeURIComponent(notice)}`;\n\nconst pill = (tone, text) => `<span class=\"pill ${tone}\">${esc(text)}</span>`;\nconst callout = (tone, html) => `<div class=\"callout ${tone}\">${html}</div>`;\n\n// One type family (Figtree, from Google Fonts) with the system font as the fallback when offline.\nconst FONT_LINK = '<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap\">';\n// The business's mark: three tussock blades on dark teal.\nconst BRAND_MARK = '<svg class=\"mark\" width=\"34\" height=\"34\" viewBox=\"0 0 34 34\" aria-hidden=\"true\"><rect width=\"34\" height=\"34\" rx=\"10\" fill=\"#0e3a35\"/><g fill=\"none\" stroke=\"#d6f04a\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M17 26V10\"/><path d=\"M17 26c-.8-5.6-3.8-9-8.5-11\"/><path d=\"M17 26c.8-5.6 3.8-9 8.5-11\"/></g></svg>';\n\nconst THEME = `\n:root{--bg:#f6f4ee;--paper:#fff;--ink:#0f1f1b;--ink2:#34433f;--muted:#6b7672;--line:#e8e5dc;--line2:#d9d5c9;--fill:#efece4;\n--teal:#0e3a35;--teal2:#1d5c53;--teal3:#2f7a6e;--lime:#d6f04a;\n--ok:#18794e;--okbg:#e5f3ea;--warn:#8f5600;--warnbg:#fbf0d6;--bad:#b42318;--badbg:#fdeceb;--info:#1f5f8b;--infobg:#e7f0f8;\n--font:\"Figtree\",-apple-system,BlinkMacSystemFont,\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,sans-serif;\n--shadow:0 1px 2px rgba(15,31,27,.04),0 10px 30px -14px rgba(15,31,27,.14)}\n*{box-sizing:border-box}\nhtml{-webkit-text-size-adjust:100%}\nbody{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}\n.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}\n.top b{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.01em}\n.top b .mark{width:28px;height:28px}\n.top span{font-size:12.5px;font-weight:600;color:var(--teal2);background:#e6efeb;border-radius:999px;padding:4px 12px;white-space:nowrap}\n.card{max-width:640px;margin:36px auto;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:36px;box-shadow:var(--shadow)}\n.card.wide{max-width:900px}\nh1{font-weight:650;font-size:32px;line-height:1.12;letter-spacing:-.03em;margin:0 0 10px}\nh2{font-weight:650;font-size:19px;line-height:1.3;letter-spacing:-.015em;margin:30px 0 10px}\np{margin:6px 0 14px;color:var(--ink2)}.muted{color:var(--muted);font-size:14px}\na{color:var(--teal2);text-underline-offset:3px}\nlabel{display:block;font-weight:600;font-size:14px;margin:18px 0 6px}\ninput,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;font:inherit;font-size:15.5px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}\ninput[type=file]{padding:10px 12px;background:var(--bg)}\ninput[type=checkbox]{accent-color:var(--teal2)}\ntextarea{min-height:110px;resize:vertical}\ninput:focus,select:focus,textarea:focus{outline:0;border-color:var(--teal3);box-shadow:0 0 0 4px rgba(47,122,110,.16)}\n.btn:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(47,122,110,.4);outline-offset:2px}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--teal);color:#fff;border:1px solid transparent;border-radius:999px;padding:0 24px;min-height:50px;font:600 15.5px var(--font);cursor:pointer;text-decoration:none;margin-top:18px;text-align:center;transition:background .15s,transform .08s}\n.btn:hover{background:#0a2925}.btn:active{transform:scale(.98)}\n.btn.go{background:var(--ok)}.btn.go:hover{background:#12623e}\n.btn.line{background:#fff;color:var(--ink);border-color:var(--line2)}.btn.line:hover{background:var(--fill)}\n.btn.stop{background:#fff;color:var(--bad);border-color:#efc3be}.btn.stop:hover{background:var(--badbg)}\n.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1.45;white-space:nowrap;vertical-align:1px}\n.pill::before{content:\"\";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}\n.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}\n.pill.info{background:var(--infobg);color:var(--info)}.pill.grey{background:var(--fill);color:var(--muted)}\n.callout{border-radius:16px;padding:14px 18px;margin:16px 0;font-size:15px;line-height:1.5}\n.callout.ok{background:var(--okbg);color:#0f5132}.callout.warn{background:var(--warnbg);color:#5c3a00}\n.callout.bad{background:var(--badbg);color:#7a1a12}.callout.info{background:var(--infobg);color:#173f5f}\ntable.kv{width:100%;border-collapse:collapse;margin:10px 0}\ntable.kv td{padding:11px 4px;border-bottom:1px solid var(--line);vertical-align:top;font-size:15px}\ntable.kv tr:last-child td{border-bottom:0}\ntable.kv td:first-child{color:var(--muted);width:36%}\ntable.list{width:100%;border-collapse:collapse;margin:10px 0}\ntable.list th{font-size:12.5px;color:var(--muted);text-align:left;font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line)}\ntable.list td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14.5px}\n.num{text-align:right;font-variant-numeric:tabular-nums}\n.chk{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}\n.chk:last-child{border-bottom:0}\n.chk .i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700}\n.chk.ok .i{background:var(--okbg);color:var(--ok)}.chk.warn .i{background:var(--warnbg);color:var(--warn)}.chk.high .i{background:var(--bad);color:#fff}\n.chk b{display:block;font-size:15px;font-weight:600}.chk span{color:var(--ink2);font-size:14.5px}\n.qcard{display:block;border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;text-decoration:none;color:inherit;background:#fff;transition:border-color .15s,box-shadow .15s}\n.qcard:hover{border-color:var(--line2);box-shadow:var(--shadow)}.qcard .t{display:flex;justify-content:space-between;gap:10px;font-weight:650}.qcard .r{margin-top:6px;font-size:14px;color:var(--ink2)}\n.stack>form{border-top:1px solid var(--line);padding-top:10px;margin-top:20px}\n.stack h3{font-weight:650;font-size:17px;letter-spacing:-.01em;margin:14px 0 2px}\ndetails summary{cursor:pointer}\n.sheet h1{font-size:30px}\n.sheet table.list td,.sheet table.list th{padding:9px 8px}\n.foot{text-align:center;color:var(--muted);font-size:12.5px;margin:12px 16px 40px}\n@media(max-width:560px){.card{margin:0;border-radius:0;border-left:0;border-right:0;padding:26px 18px;box-shadow:none}.btn{display:flex;width:100%}.btn.inline{display:inline-flex;width:auto}h1{font-size:27px}}\n@media print{.top,.foot,.noprint{display:none!important}body{background:#fff}.card{border:0;margin:0;max-width:none;padding:0;box-shadow:none}}\n`;\n\n// A clean, mobile-friendly page for approvers, suppliers, contractors and the certifier.\nconst page = (title, body, opts = {}) => {\n  const cfg = configFrom();\n  return `<!doctype html><html lang=\"en-NZ\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>${FONT_LINK}<style>${THEME}</style></head><body>\n<header class=\"top\"><b>${BRAND_MARK}${esc(cfg.business_name || 'Tussock Ridge Farming Ltd')}</b><span>${esc(opts.tag || 'Secure link')}</span></header>\n<main class=\"card${opts.wide ? ' wide' : ''}\">${body}</main>\n<div class=\"foot\">Demo by Forrof. All people, businesses and numbers are fictional.</div></body></html>`;\n};\n\n\nreturn [{ json: { summary: $('Build demo data').first().json.summary } }];"
+      },
+      "id": "850b9269-87eb-4fbf-acea-54bbca7a1d12"
+    }
+  ],
+  "connections": {
+    "When called by a workflow": {
+      "main": [
+        [
+          {
+            "node": "Create Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run manually": {
+      "main": [
+        [
+          {
+            "node": "Create Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Config": {
+      "main": [
+        [
+          {
+            "node": "Create Suppliers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Suppliers": {
+      "main": [
+        [
+          {
+            "node": "Create Contracts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Contracts": {
+      "main": [
+        [
+          {
+            "node": "Create Dockets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Dockets": {
+      "main": [
+        [
+          {
+            "node": "Create Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Invoices": {
+      "main": [
+        [
+          {
+            "node": "Create Payment runs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Payment runs": {
+      "main": [
+        [
+          {
+            "node": "Create Farms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Farms": {
+      "main": [
+        [
+          {
+            "node": "Create Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Requirements": {
+      "main": [
+        [
+          {
+            "node": "Create Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Evidence": {
+      "main": [
+        [
+          {
+            "node": "Create Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Register": {
+      "main": [
+        [
+          {
+            "node": "Create Outbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Outbox": {
+      "main": [
+        [
+          {
+            "node": "Create Audit log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Audit log": {
+      "main": [
+        [
+          {
+            "node": "Clear Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Config": {
+      "main": [
+        [
+          {
+            "node": "Clear Suppliers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Suppliers": {
+      "main": [
+        [
+          {
+            "node": "Clear Contracts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Contracts": {
+      "main": [
+        [
+          {
+            "node": "Clear Dockets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Dockets": {
+      "main": [
+        [
+          {
+            "node": "Clear Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Invoices": {
+      "main": [
+        [
+          {
+            "node": "Clear Payment runs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Payment runs": {
+      "main": [
+        [
+          {
+            "node": "Clear Farms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Farms": {
+      "main": [
+        [
+          {
+            "node": "Clear Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Requirements": {
+      "main": [
+        [
+          {
+            "node": "Clear Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Evidence": {
+      "main": [
+        [
+          {
+            "node": "Clear Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Register": {
+      "main": [
+        [
+          {
+            "node": "Clear Outbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Outbox": {
+      "main": [
+        [
+          {
+            "node": "Clear Audit log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Audit log": {
+      "main": [
+        [
+          {
+            "node": "Build demo data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build demo data": {
+      "main": [
+        [
+          {
+            "node": "Rows: Config",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Suppliers",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Contracts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Dockets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Invoices",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Farms",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Requirements",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Evidence",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Register",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rows: Audit log",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Config": {
+      "main": [
+        [
+          {
+            "node": "Insert Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Suppliers": {
+      "main": [
+        [
+          {
+            "node": "Insert Suppliers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Contracts": {
+      "main": [
+        [
+          {
+            "node": "Insert Contracts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Dockets": {
+      "main": [
+        [
+          {
+            "node": "Insert Dockets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Invoices": {
+      "main": [
+        [
+          {
+            "node": "Insert Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Farms": {
+      "main": [
+        [
+          {
+            "node": "Insert Farms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Requirements": {
+      "main": [
+        [
+          {
+            "node": "Insert Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Evidence": {
+      "main": [
+        [
+          {
+            "node": "Insert Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Register": {
+      "main": [
+        [
+          {
+            "node": "Insert Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows: Audit log": {
+      "main": [
+        [
+          {
+            "node": "Insert Audit log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Pacific/Auckland",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Creates the data tables if needed and reloads the fictional Monday-morning demo data."
+  },
+  "tags": []
+}

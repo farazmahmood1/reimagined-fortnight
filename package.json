@@ -7,7 +7,13 @@
     "start": "node scripts/start.mjs",
     "setup": "node scripts/setup.mjs",
     "reset-demo": "node scripts/setup.mjs --reset",
-    "test-flows": "node scripts/test-flows.mjs"
+    "test-flows": "node scripts/test-flows.mjs",
+    "agri:start": "node agri-nz/scripts/start.mjs",
+    "agri:setup": "node agri-nz/scripts/setup.mjs",
+    "agri:reset-demo": "node agri-nz/scripts/setup.mjs --reset",
+    "agri:test-rules": "node agri-nz/scripts/test-rules.mjs",
+    "agri:test-flows": "node agri-nz/scripts/test-flows.mjs",
+    "agri:update": "node agri-nz/scripts/update.mjs"
   },
   "engines": {
     "node": ">=24.0.0"

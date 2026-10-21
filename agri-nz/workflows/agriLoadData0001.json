@@ -1,0 +1,495 @@
+{
+  "id": "agriLoadData0001",
+  "name": "Shared · Load data",
+  "nodes": [
+    {
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        80
+      ],
+      "parameters": {
+        "content": "## Shared · Load data\nReads the farm's records in one go so each automation starts with the whole picture.\n\nIn a live business this is where the calls to Xero, the farm software and the document store go.",
+        "width": 560,
+        "height": 150,
+        "color": 5
+      },
+      "id": "870d303d-12a0-4415-abda-4e20e42c33c9"
+    },
+    {
+      "name": "When called by a workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "0f29ab22-e474-4aa3-a0bf-ea4cf7fe8cfe"
+    },
+    {
+      "name": "Config",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Config"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "ffec850a-a7a1-475b-a070-f6eb030029df"
+    },
+    {
+      "name": "Suppliers",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Suppliers"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "d0435382-cbec-441c-a3d1-ae6b1f817bcc"
+    },
+    {
+      "name": "Contracts",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        620,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Contracts"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "02621b0d-0ac7-4fbd-aa73-4a135420ea01"
+    },
+    {
+      "name": "Dockets",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        820,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Dockets"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "63d3d496-39e0-4aab-a7ba-53867b9d12c3"
+    },
+    {
+      "name": "Invoices",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1020,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Invoices"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "c72afcd1-e4dd-4d88-a7da-5a4a4dec5cee"
+    },
+    {
+      "name": "Payment runs",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1220,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Payment runs"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "22e089f4-a045-44a3-abd0-cb9f778560ec"
+    },
+    {
+      "name": "Farms",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1420,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Farms"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "ee47cf8a-9db6-408d-ae6e-bfee3c292d43"
+    },
+    {
+      "name": "Requirements",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1620,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Requirements"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "4397e884-c1e0-4e67-aba6-4f80f00bae4d"
+    },
+    {
+      "name": "Evidence",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1820,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Evidence"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "ed4dfb38-4b39-43c0-a804-e6aaeefdd122"
+    },
+    {
+      "name": "Register",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2020,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Register"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "29555273-76ce-4b7c-a412-60cf3948d843"
+    },
+    {
+      "name": "Outbox",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2220,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Outbox"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "fbef33f4-3cd2-437e-aa41-e5be8000a9fe"
+    },
+    {
+      "name": "Audit log",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2420,
+        300
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Audit log"
+        },
+        "matchType": "anyCondition",
+        "filters": {},
+        "returnAll": true
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "id": "e22a91ee-1d99-4a49-ad81-f907e9840679"
+    },
+    {
+      "name": "Bundle tables",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2620,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Shared helpers injected at the top of every Code node by scripts/build-workflows.mjs.\nconst TZ = 'Pacific/Auckland';\nconst DAY_MS = 86400000;\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst round2 = (n) => Math.round(Number((Number(n || 0) * 100).toFixed(6))) / 100;\nconst money = (n) => new Intl.NumberFormat('en-NZ', { style: 'currency', currency: 'NZD' }).format(Number(n || 0));\nconst priceText = (n) => '$' + Number(n || 0).toLocaleString('en-NZ', { minimumFractionDigits: 2, maximumFractionDigits: 4 });\nconst qtyText = (n) => Number(n || 0).toLocaleString('en-NZ', { maximumFractionDigits: 2 });\nconst unitText = (qty, unit) => (Number(qty) !== 1 && { load: 'loads', bale: 'bales' }[unit]) || unit;\nconst newToken = () => require('crypto').randomBytes(18).toString('hex');\n// Each call is one millisecond later than the last, so rows written in one run keep their order.\nlet _seq = 0;\nconst nowIso = () => new Date(Date.now() + _seq++).toISOString();\n\n// Calendar dates are plain \"YYYY-MM-DD\" strings in New Zealand time, so this PC's own clock never matters.\nconst nzToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());\nconst dateOf = (s) => new Date(`${String(s).slice(0, 10)}T00:00:00Z`);\nconst isoDay = (d) => d.toISOString().slice(0, 10);\nconst addDays = (s, n) => isoDay(new Date(dateOf(s).getTime() + n * DAY_MS));\nconst addMonths = (s, n) => {\n  const d = dateOf(s);\n  const day = d.getUTCDate();\n  const target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));\n  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();\n  target.setUTCDate(Math.min(day, last));\n  return isoDay(target);\n};\nconst daysBetween = (from, to) => Math.round((dateOf(to) - dateOf(from)) / DAY_MS);\nconst fmtDate = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) : '—');\nconst fmtLong = (s) => (s ? dateOf(s).toLocaleDateString('en-NZ', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—');\nconst fmtTime = (iso) => (iso ? new Date(iso).toLocaleString('en-NZ', { timeZone: TZ, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) : '');\nconst ago = (iso) => {\n  if (!iso) return '';\n  const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));\n  if (s < 60) return 'just now';\n  if (s < 3600) return `${Math.round(s / 60)} min ago`;\n  if (s < 86400) return `${Math.round(s / 3600)} h ago`;\n  return `${Math.round(s / 86400)} d ago`;\n};\n\n// Every Code node runs right after \"Load data\", whose single item holds one array per data table.\nconst DATA = $input.first().json || {};\nconst tableRows = (table) => (Array.isArray(DATA[table]) ? DATA[table] : []);\nconst configFrom = () => Object.fromEntries(tableRows('Config').map((r) => [r.key, r.value]));\nconst firstName = (name) => String(name || '').split(' ')[0];\nconst person = (cfg, role) => ({ name: cfg[`${role}_name`] || '', email: cfg[`${role}_email`] || '', phone: cfg[`${role}_phone`] || '' });\n\n// A message for the Shared · Send message workflow. Nothing is sent from anywhere else.\nconst msg = (m) => ({\n  channel: m.channel, to_name: m.to_name || '', to_address: m.to_address || '', subject: m.subject || '',\n  body: m.body || '', link: m.link || '', related: m.related || '', workflow: m.workflow || '',\n});\n// Text the phone if we have one, otherwise email. `both` sends the email as well.\nconst reach = (p, m, how = 'auto') => {\n  const out = [];\n  const to = { to_name: p.name, related: m.related, workflow: m.workflow };\n  if (p.phone && how !== 'email') out.push(msg({ ...to, channel: 'SMS', to_address: p.phone, body: m.sms || m.body, link: m.link }));\n  if (p.email && (how === 'email' || how === 'both' || !p.phone)) out.push(msg({ ...to, channel: 'Email', to_address: p.email, subject: m.subject, body: m.body, link: m.link }));\n  return out;\n};\n// One line of the audit trail: who did what, to what, and when.\nconst auditRow = (actor, type, flow, subject, action, detail = '') => ({\n  at: nowIso(), actor, actor_type: type, flow, subject: String(subject).slice(0, 200), action: String(action).slice(0, 200), detail: String(detail).slice(0, 700),\n});\n// The page a webhook link returns after a person acts: back to the console, on the same tab, with a notice.\nconst backToConsole = (cfg, tab, notice) => `${cfg.base_url}/webhook/console?tab=${encodeURIComponent(tab || 'gate')}&done=${encodeURIComponent(notice)}`;\n\nconst pill = (tone, text) => `<span class=\"pill ${tone}\">${esc(text)}</span>`;\nconst callout = (tone, html) => `<div class=\"callout ${tone}\">${html}</div>`;\n\n// One type family (Figtree, from Google Fonts) with the system font as the fallback when offline.\nconst FONT_LINK = '<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&display=swap\">';\n// The business's mark: three tussock blades on dark teal.\nconst BRAND_MARK = '<svg class=\"mark\" width=\"34\" height=\"34\" viewBox=\"0 0 34 34\" aria-hidden=\"true\"><rect width=\"34\" height=\"34\" rx=\"10\" fill=\"#0e3a35\"/><g fill=\"none\" stroke=\"#d6f04a\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M17 26V10\"/><path d=\"M17 26c-.8-5.6-3.8-9-8.5-11\"/><path d=\"M17 26c.8-5.6 3.8-9 8.5-11\"/></g></svg>';\n\nconst THEME = `\n:root{--bg:#f6f4ee;--paper:#fff;--ink:#0f1f1b;--ink2:#34433f;--muted:#6b7672;--line:#e8e5dc;--line2:#d9d5c9;--fill:#efece4;\n--teal:#0e3a35;--teal2:#1d5c53;--teal3:#2f7a6e;--lime:#d6f04a;\n--ok:#18794e;--okbg:#e5f3ea;--warn:#8f5600;--warnbg:#fbf0d6;--bad:#b42318;--badbg:#fdeceb;--info:#1f5f8b;--infobg:#e7f0f8;\n--font:\"Figtree\",-apple-system,BlinkMacSystemFont,\"Segoe UI Variable Text\",\"Segoe UI\",system-ui,sans-serif;\n--shadow:0 1px 2px rgba(15,31,27,.04),0 10px 30px -14px rgba(15,31,27,.14)}\n*{box-sizing:border-box}\nhtml{-webkit-text-size-adjust:100%}\nbody{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}\n.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}\n.top b{display:flex;align-items:center;gap:10px;font-weight:650;font-size:15px;letter-spacing:-.01em}\n.top b .mark{width:28px;height:28px}\n.top span{font-size:12.5px;font-weight:600;color:var(--teal2);background:#e6efeb;border-radius:999px;padding:4px 12px;white-space:nowrap}\n.card{max-width:640px;margin:36px auto;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:36px;box-shadow:var(--shadow)}\n.card.wide{max-width:900px}\nh1{font-weight:650;font-size:32px;line-height:1.12;letter-spacing:-.03em;margin:0 0 10px}\nh2{font-weight:650;font-size:19px;line-height:1.3;letter-spacing:-.015em;margin:30px 0 10px}\np{margin:6px 0 14px;color:var(--ink2)}.muted{color:var(--muted);font-size:14px}\na{color:var(--teal2);text-underline-offset:3px}\nlabel{display:block;font-weight:600;font-size:14px;margin:18px 0 6px}\ninput,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;font:inherit;font-size:15.5px;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}\ninput[type=file]{padding:10px 12px;background:var(--bg)}\ninput[type=checkbox]{accent-color:var(--teal2)}\ntextarea{min-height:110px;resize:vertical}\ninput:focus,select:focus,textarea:focus{outline:0;border-color:var(--teal3);box-shadow:0 0 0 4px rgba(47,122,110,.16)}\n.btn:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid rgba(47,122,110,.4);outline-offset:2px}\n.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--teal);color:#fff;border:1px solid transparent;border-radius:999px;padding:0 24px;min-height:50px;font:600 15.5px var(--font);cursor:pointer;text-decoration:none;margin-top:18px;text-align:center;transition:background .15s,transform .08s}\n.btn:hover{background:#0a2925}.btn:active{transform:scale(.98)}\n.btn.go{background:var(--ok)}.btn.go:hover{background:#12623e}\n.btn.line{background:#fff;color:var(--ink);border-color:var(--line2)}.btn.line:hover{background:var(--fill)}\n.btn.stop{background:#fff;color:var(--bad);border-color:#efc3be}.btn.stop:hover{background:var(--badbg)}\n.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:600;line-height:1.45;white-space:nowrap;vertical-align:1px}\n.pill::before{content:\"\";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}\n.pill.ok{background:var(--okbg);color:var(--ok)}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.bad{background:var(--badbg);color:var(--bad)}\n.pill.info{background:var(--infobg);color:var(--info)}.pill.grey{background:var(--fill);color:var(--muted)}\n.callout{border-radius:16px;padding:14px 18px;margin:16px 0;font-size:15px;line-height:1.5}\n.callout.ok{background:var(--okbg);color:#0f5132}.callout.warn{background:var(--warnbg);color:#5c3a00}\n.callout.bad{background:var(--badbg);color:#7a1a12}.callout.info{background:var(--infobg);color:#173f5f}\ntable.kv{width:100%;border-collapse:collapse;margin:10px 0}\ntable.kv td{padding:11px 4px;border-bottom:1px solid var(--line);vertical-align:top;font-size:15px}\ntable.kv tr:last-child td{border-bottom:0}\ntable.kv td:first-child{color:var(--muted);width:36%}\ntable.list{width:100%;border-collapse:collapse;margin:10px 0}\ntable.list th{font-size:12.5px;color:var(--muted);text-align:left;font-weight:600;padding:8px 8px;border-bottom:1px solid var(--line)}\ntable.list td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14.5px}\n.num{text-align:right;font-variant-numeric:tabular-nums}\n.chk{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}\n.chk:last-child{border-bottom:0}\n.chk .i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700}\n.chk.ok .i{background:var(--okbg);color:var(--ok)}.chk.warn .i{background:var(--warnbg);color:var(--warn)}.chk.high .i{background:var(--bad);color:#fff}\n.chk b{display:block;font-size:15px;font-weight:600}.chk span{color:var(--ink2);font-size:14.5px}\n.qcard{display:block;border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;text-decoration:none;color:inherit;background:#fff;transition:border-color .15s,box-shadow .15s}\n.qcard:hover{border-color:var(--line2);box-shadow:var(--shadow)}.qcard .t{display:flex;justify-content:space-between;gap:10px;font-weight:650}.qcard .r{margin-top:6px;font-size:14px;color:var(--ink2)}\n.stack>form{border-top:1px solid var(--line);padding-top:10px;margin-top:20px}\n.stack h3{font-weight:650;font-size:17px;letter-spacing:-.01em;margin:14px 0 2px}\ndetails summary{cursor:pointer}\n.sheet h1{font-size:30px}\n.sheet table.list td,.sheet table.list th{padding:9px 8px}\n.foot{text-align:center;color:var(--muted);font-size:12.5px;margin:12px 16px 40px}\n@media(max-width:560px){.card{margin:0;border-radius:0;border-left:0;border-right:0;padding:26px 18px;box-shadow:none}.btn{display:flex;width:100%}.btn.inline{display:inline-flex;width:auto}h1{font-size:27px}}\n@media print{.top,.foot,.noprint{display:none!important}body{background:#fff}.card{border:0;margin:0;max-width:none;padding:0;box-shadow:none}}\n`;\n\n// A clean, mobile-friendly page for approvers, suppliers, contractors and the certifier.\nconst page = (title, body, opts = {}) => {\n  const cfg = configFrom();\n  return `<!doctype html><html lang=\"en-NZ\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>${esc(title)}</title>${FONT_LINK}<style>${THEME}</style></head><body>\n<header class=\"top\"><b>${BRAND_MARK}${esc(cfg.business_name || 'Tussock Ridge Farming Ltd')}</b><span>${esc(opts.tag || 'Secure link')}</span></header>\n<main class=\"card${opts.wide ? ' wide' : ''}\">${body}</main>\n<div class=\"foot\">Demo by Forrof. All people, businesses and numbers are fictional.</div></body></html>`;\n};\n\n\nconst tables = [\"Config\",\"Suppliers\",\"Contracts\",\"Dockets\",\"Invoices\",\"Payment runs\",\"Farms\",\"Requirements\",\"Evidence\",\"Register\",\"Outbox\",\"Audit log\"];\nconst out = {};\nfor (const t of tables) out[t] = $(t).all().map((i) => i.json).filter((r) => r && r.id !== undefined);\nreturn [{ json: out }];"
+      },
+      "id": "34a736f1-9fdc-4589-a79a-51f5b6805ed6"
+    }
+  ],
+  "connections": {
+    "When called by a workflow": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Suppliers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suppliers": {
+      "main": [
+        [
+          {
+            "node": "Contracts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contracts": {
+      "main": [
+        [
+          {
+            "node": "Dockets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dockets": {
+      "main": [
+        [
+          {
+            "node": "Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoices": {
+      "main": [
+        [
+          {
+            "node": "Payment runs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payment runs": {
+      "main": [
+        [
+          {
+            "node": "Farms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Farms": {
+      "main": [
+        [
+          {
+            "node": "Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requirements": {
+      "main": [
+        [
+          {
+            "node": "Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evidence": {
+      "main": [
+        [
+          {
+            "node": "Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register": {
+      "main": [
+        [
+          {
+            "node": "Outbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outbox": {
+      "main": [
+        [
+          {
+            "node": "Audit log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audit log": {
+      "main": [
+        [
+          {
+            "node": "Bundle tables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Pacific/Auckland",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Reads every data table once and returns one item with an array per table. Stands in for the farm's accounts, records and register."
+  },
+  "tags": []
+}
